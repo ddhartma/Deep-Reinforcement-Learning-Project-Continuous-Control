@@ -1,6 +1,6 @@
 [image1]: assets/scoring_result.png "image1"
 
-# Deep Reinforcement Learning Project - Unitiy-Banana-DQN - Implementation Report
+# Deep Reinforcement Learning Project - Continuous Control - Implementation Report
 
 ## Content
 - [Implementation - Continuous_Control.ipynb](#impl_notebook_train)
@@ -947,7 +947,7 @@
             Q_values = self.fc3(x)
             return Q_values
     ```
-    
+
 ## Implementation - Navigation_Trained_Agent.ipynb <a name="impl_notebook_trained_agent"></a> 
 - Open Jupyter Notebook ```Navigation_Trained_Agent.ipynb```
     ### Import important libraries
