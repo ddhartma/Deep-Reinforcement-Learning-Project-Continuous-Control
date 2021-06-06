@@ -3,18 +3,19 @@
 # Deep Reinforcement Learning Project - Unitiy-Banana-DQN - Implementation Report
 
 ## Content
-- [Implementation - Navigation_Training.ipynb](#impl_notebook_train)
-- [Implementation - dqn_agent.py](#impl_agent)
+- [Implementation - Continuous_Control.ipynb](#impl_notebook_train)
+- [Implementation - ddpg_agent.py](#impl_agent)
 - [Implementation - model.py](#impl_model)
-- [Implementation - Navigation_Trained_Agent.ipynb](#impl_notebook_trained_agent)
+- [Implementation - Continuous_Control_Trained_Agent.ipynb](#impl_notebook_trained_agent)
 - [Ideas for future work](#ideas_future)
 
-## Implementation - Navigation_Training.ipynb <a name="impl_notebook_train"></a>
-- Open jupyter notebook file ```Navigation_Training.ipynb```
+## Implementation - Continuous_Control.ipynb <a name="impl_notebook_train"></a>
+- Open jupyter notebook file ```Continuous_Control.ipynb```
     ### Import important libraries
     - modul ***unityagents*** provides the Unity Environment. This modul is part of requirements.txt. Check the README.md file for detailed setup instructions.
-    - modul **dqn_agent** contains the implementation of an DQN agent. Check the description of **dqn_agent.py** for further details. 
+    - modul **ddpg_agent** contains the implementation of an DDPG agent. Check the description of **ddpg_agent.py** for further details. 
     ```
+    import gym
     import random
     import torch
     import numpy as np
@@ -23,102 +24,228 @@
     %matplotlib inline
 
     from unityagents import UnityEnvironment
-    from dqn_agent import DQNAgent, DDQNAgent, PRBDDQNAgent
+    from ddpg_agent import Agent
     ```
     ### Instantiate the Environment
-    - Load the UnityEnvironment and store it in **env**
+    - Load the UnityEnvironment and store it in **env**. Here I have chosen version 1 (a single agent).Check out README for further information
     - Environments contain brains which are responsible for deciding the actions of their associated agents.
     ```
-    env = UnityEnvironment(file_name="Banana.app")
+    env = UnityEnvironment(file_name='Reacher_Windows_x86_64/Reacher.exe', no_graphics=True, worker_id=1)
     # get the default brain
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
     ```
-    ### Instantiate the Agent
+    ### Collect information about the environment
     ```
-    agent = Agent(state_size=state_size, action_size=action_size, seed=0)
+    # reset the environment
+    env_info = env.reset(train_mode=True)[brain_name]
+
+    # number of agents
+    num_agents = len(env_info.agents)
+    print('Number of agents:', num_agents)
+
+    # size of each action
+    action_size = brain.vector_action_space_size
+    print('Size of each action:', action_size)
+
+    # examine the state space 
+    states = env_info.vector_observations
+    state_size = states.shape[1]
+    print('There are {} agents. Each observes a state with length: {}'.format(states.shape[0], state_size))
+    print()
+    print('The state for the first agent looks like: \n', states[0])
     ```
-    ### Watch an untrained agent
-    - **state** - (numpy arrray) with 37 float values, contains the **agent's velocity**, along with **ray-based perception of objects** around the agent's forward direction
-    - **action** - (int) four actions for four directions (0...3) are possible. See README.md for further details
+    - **Number of agents (states.shape[0]):** 1
+    - **Size of each action (action_size):** 4
+    - **Agent observes a state with length (states.shape[1]):** 33
+    - **The state for the first agent looks like (states[0]):**
+    ``` 
+    [ 0.00000000e+00 -4.00000000e+00  0.00000000e+00  1.00000000e+00
+    -0.00000000e+00 -0.00000000e+00 -4.37113883e-08  0.00000000e+00
+    0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+    0.00000000e+00  0.00000000e+00 -1.00000000e+01  0.00000000e+00
+    1.00000000e+00 -0.00000000e+00 -0.00000000e+00 -4.37113883e-08
+    0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+    0.00000000e+00  0.00000000e+00 -6.30408478e+00 -1.00000000e+00
+    -4.92529202e+00  0.00000000e+00  1.00000000e+00  0.00000000e+00
+    -5.33014059e-01]
+    ```
+    ### Take Random Actions in The Environment - Understand types and shapes of variables
+    - **states** - (numpy array) with shape (1,33), a vector with 33 float values, contains the agent's position, rotation, velocity, angular-velocity of the arm. Given this information, the agent has to learn how to best select actions.
+    - **actions** - (numpy array) with shape (1,4), a vector with 4 float values
     - **env_info** - (unityagent instance)
-    - **next_state** - (numpy array) next state (here chosen by random action)
-    - **reward** - (int/float) +1 is provided for collecting a yellow banana and -1 is provided for collecting a blue banana
-    - **done** - (bool) if True episode is over
-    - **score** - (float) cumulative reward, scoring after each action
+    - **next_states** - (numpy array) next state (here chosen by random action), same config as states
+    - **rewards** - (list) of float values, here: len(rewards) is 1 (one agent), a reward of +0.1 is provided for for each step that the agent's hand is in the goal location
+    - **dones** - (list) of bool values, here: len(dones) is 1 (one agent), if True episode is over
+    - **scores** - (numpy array) withshape (1,), cumulative reward, scoring after each action
     ```
-    env_info = env.reset(train_mode=True)[brain_name]  # reset the environment
-    state = env_info.vector_observations[0]            # get the current state
-    score = 0                                          # initialize the score
+    env_info = env.reset(train_mode=True)[brain_name]      # reset the environment    
+    states = env_info.vector_observations                  # get the current state (for each agent)
+    scores = np.zeros(num_agents)                          # initialize the score (for each agent)
     while True:
-        action = np.random.randint(action_size)        # select an action
-        env_info = env.step(action)[brain_name]        # send the action to the environment
-        next_state = env_info.vector_observations[0]   # get the next state
-        reward = env_info.rewards[0]                   # get the reward
-        done = env_info.local_done[0]                  # see if episode has finished
-        score += reward                                # update the score
-        state = next_state                             # roll over the state to next time step
-        if done:                                       # exit loop if episode finished
+        actions = np.random.randn(num_agents, action_size) # select an action (for each agent)
+        actions = np.clip(actions, -1, 1)                  # all actions between -1 and 1
+        env_info = env.step(actions)[brain_name]           # send all actions to tne environment
+        next_states = env_info.vector_observations         # get next state (for each agent)
+        rewards = env_info.rewards                         # get reward (for each agent)
+        dones = env_info.local_done                        # see if episode finished
+        scores += env_info.rewards                         # update the score (for each agent)
+        states = next_states                               # roll over states to next time step
+        if np.any(dones):                                  # exit loop if episode finished
             break
 
-    print('state')
-    print(state)
+    print('states')
+    print(states)
+    print('states shape', states.shape)
+    print('type', type(states))
     print()
-    print('action ', action)  
+    print('actions ', actions)
+    print('actions shape', actions.shape)
+    print('type', type(actions))
     print()
     print('env_info')
     print(env_info)
     print()
-    print('next_state')
-    print(next_state)
+    print('next_states')
+    print(next_states)
+    print('next_states shape', next_states.shape)
+    print('type', type(next_states))
     print()
-    print('reward')
-    print(reward)
+    print('rewards')
+    print(rewards)
+    print('type', type(rewards))
     print()
-    print('done')
-    print(done)
+    print('dones')
+    print(dones)
+    print('type', type(dones))
     print()
-    print("Score: {}".format(score))
+    print('scores')
+    print(scores)
+    print('scores shape', scores.shape)
+    print('type', type(scores))
+    print('Total score (averaged over agents) this episode: {}'.format(np.mean(scores)))
 
-    RESULT:
-    -------------
-    state
-    [0.         1.         0.         0.         0.21772696 1.
-    0.         0.         0.         0.07809805 0.         0.
-    1.         0.         0.08886749 1.         0.         0.
-    0.         0.05297319 1.         0.         0.         0.
-    0.1608755  1.         0.         0.         0.         0.05958167
-    0.         0.         0.         1.         0.         0.
-    0.        ]
+    RESULTS:
+    ------------
+    states
+    [[ 0.00000000e+00 -4.00000000e+00  0.00000000e+00  1.00000000e+00
+    -0.00000000e+00 -0.00000000e+00 -4.37113883e-08  0.00000000e+00
+    0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+    0.00000000e+00  0.00000000e+00 -1.00000000e+01  0.00000000e+00
+    1.00000000e+00 -0.00000000e+00 -0.00000000e+00 -4.37113883e-08
+    0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+    0.00000000e+00  0.00000000e+00 -5.14229965e+00 -1.00000000e+00
+    6.12835693e+00  0.00000000e+00  1.00000000e+00  0.00000000e+00
+    3.78988951e-01]]
+    states shape (1, 33)
+    type <class 'numpy.ndarray'>
 
-    action  0
+    actions  [[-1.         -1.         -0.61081709 -0.06546604]]
+    actions shape (1, 4)
+    type <class 'numpy.ndarray'>
 
     env_info
-    <unityagents.brain.BrainInfo object at 0x116ff4208>
+    <unityagents.brain.BrainInfo object at 0x0000023ECCC1CBA8>
 
-    next_state
-    [0.         1.         0.         0.         0.21772696 1.
-    0.         0.         0.         0.07809805 0.         0.
-    1.         0.         0.08886749 1.         0.         0.
-    0.         0.05297319 1.         0.         0.         0.
-    0.1608755  1.         0.         0.         0.         0.05958167
-    0.         0.         0.         1.         0.         0.
-    0.        ]
+    next_states
+    [[ 0.00000000e+00 -4.00000000e+00  0.00000000e+00  1.00000000e+00
+    -0.00000000e+00 -0.00000000e+00 -4.37113883e-08  0.00000000e+00
+    0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+    0.00000000e+00  0.00000000e+00 -1.00000000e+01  0.00000000e+00
+    1.00000000e+00 -0.00000000e+00 -0.00000000e+00 -4.37113883e-08
+    0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
+    0.00000000e+00  0.00000000e+00 -5.14229965e+00 -1.00000000e+00
+    6.12835693e+00  0.00000000e+00  1.00000000e+00  0.00000000e+00
+    3.78988951e-01]]
+    next_states shape (1, 33)
+    type <class 'numpy.ndarray'>
 
-    reward
-    0.0
+    rewards
+    [0.0]
+    type <class 'list'>
 
-    done
-    True
+    dones
+    [True]
+    type <class 'list'>
 
-    Score: 0.0
+    scores
+    [0.13]
+    scores shape (1,)
+    type <class 'numpy.ndarray'>
+    Total score (averaged over agents) this episode: 0.12999999709427357
     ```
-    ### Start Training
+    ### Instantiate the Agent
+    ```
+    agent = Agent(state_size=state_size, action_size=action_size, random_seed=2)
+
+    RESULTS:
+    ------------
+
+    Training on  cpu
+
+    self.state_size 33
+
+    self.action_size 4
+
+    --
+    self.actor_local Actor(
+    (fc1): Linear(in_features=33, out_features=400, bias=True)
+    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=400, out_features=300, bias=True)
+    (fc3): Linear(in_features=300, out_features=4, bias=True)
+    )
+
+    self.actor_target Actor(
+    (fc1): Linear(in_features=33, out_features=400, bias=True)
+    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=400, out_features=300, bias=True)
+    (fc3): Linear(in_features=300, out_features=4, bias=True)
+    )
+
+    self.actor_optimizer Adam (
+    Parameter Group 0
+        amsgrad: False
+        betas: (0.9, 0.999)
+        eps: 1e-08
+        lr: 0.0001
+        weight_decay: 0
+    )
+
+    self.critic_local Critic(
+    (fcs1): Linear(in_features=33, out_features=400, bias=True)
+    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=404, out_features=300, bias=True)
+    (fc3): Linear(in_features=300, out_features=1, bias=True)
+    )
+
+    self.critic_target Critic(
+    (fcs1): Linear(in_features=33, out_features=400, bias=True)
+    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=404, out_features=300, bias=True)
+    (fc3): Linear(in_features=300, out_features=1, bias=True)
+    )
+
+    self.critic_optimizer Adam (
+    Parameter Group 0
+        amsgrad: False
+        betas: (0.9, 0.999)
+        eps: 1e-08
+        lr: 0.001
+        weight_decay: 0
+    )
+
+    self.noise <ddpg_agent.OUNoise object at 0x0000023490656780>
+
+    self.epsilon 1.0
+    ```
+   
+    ### Train an Agent
     - function which implements the agent training
     - 2 for loops: outer loop --> loop over episodes and inner loop --> loop over timesteps per episode (TD learning algorithm)
         - for the actual episode:
             - reset the environment
             - get the current state
+            - reset the agent
             - initialize the score 
             - for the actual time step:
                 - return actions for current state and policy
@@ -126,71 +253,60 @@
                 - get the next state
                 - get the reward 
                 - see if episode has finished
-                - update the agent's knowledge, using the most recently sampled tuple
+                - update the agent's knowledge, using the most recently sampled tuple (-->agent.step)
             - save most recent score
-            - decrease epsilon, turn slowly from an equiprobable action choice of exploration to steadily increasing greedy exploration with each episode
+            - save torch models for actor and critic if average score >=30
+        - return scores    
     ```
-    agent = DQNAgent(state_size=state_size, action_size=action_size, seed=0)
-    agent = DDQNAgent(state_size=state_size, action_size=action_size, seed=0)
-    agent = PRBDDQNAgent(state_size=state_size, action_size=action_size, seed=0)
-
-
-    def dqn(n_episodes=2000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
-    def ddqn(n_episodes=2000, max_t=1000, eps_start=1.0, eps_end=0.01, eps_decay=0.995):
-    def prbddqn(n_episodes=2000, max_t=1000, eps_start=1.0, eps_end=0.001, eps_decay=0.995):
-        """ Deep Q-Learning.
+    def ddpg(n_episodes=100, max_t=1000, print_every=10):
+        """ Deep Deterministic Policy Gradient
         
             INPUTS: 
             ------------
                 n_episodes - (int) maximum number of training episodes
                 max_t - (int) maximum number of timesteps per episode
-                eps_start - (float) starting value of epsilon, for epsilon-greedy action selection
-                eps_end - (float) minimum value of epsilon
-                eps_decay - (float) multiplicative factor (per episode) for decreasing epsilon
+                print_every (int) number episodes for printing average score 
                 
             OUTPUTS:
             ------------
-                scores - (list) list of scores
+                scores - (list) list of score values for each episode
         """
-        scores = []                        # list containing scores from each episode
-        scores_avg = []                    # list containing the mean of the last 100 episodes
-        scores_std = []                    # list containing the std dev of the last 100 episodes
-        scores_window = deque(maxlen=100)  # last 100 scores
-        eps = eps_start                    # initialize epsilon
-        for i_episode in range(1, n_episodes+1):
-            env_info = env.reset(train_mode=True)[brain_name]       # reset the environment
-            state = env_info.vector_observations[0]                 # get the current state
-            score = 0                                               # initialize the score
-            for t in range(max_t):
-                action = agent.act(state, eps)                      # returns actions for current state and policy
-                env_info = env.step(action)[brain_name]             # send the action to the environment
-                next_state = env_info.vector_observations[0]        # get the next state
-                reward = env_info.rewards[0]                        # get the reward
-                done = env_info.local_done[0]                       # see if episode has finished
-                agent.step(state, action, reward, next_state, done) # update the agent's knowledge
-                state = next_state                                  # set next state as current state 
-                score += reward                                     # update score with the return for this time step
-                if done:
-                    break 
-                    
-            scores_window.append(score)       # save most recent score
-            scores.append(score)              # save most recent score
-            scores_avg.append(np.mean(scores_window)) # save most recent avg
-            scores_std.append(np.std(scores_window)) # save most recent std dev
-            
-            eps = max(eps_end, eps_decay*eps) # decrease epsilon
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)), end="")
-            if i_episode % 100 == 0:
-                print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
-            if np.mean(scores_window)>=13.0:
-                print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_window)))
-                torch.save(agent.qnetwork_local.state_dict(), 'checkpoint_dqn.pth')
-                break
-        return scores, scores_avg, scores_std
 
-    scores, scores_avg, scores_std = dqn()
-    scores, scores_avg, scores_std = ddqn()
-    scores, scores_avg, scores_std = prbddqn()
+        scores_deque = deque(maxlen=100)
+        scores = []
+        for i_episode in range(1, n_episodes+1):
+            env_info = env.reset(train_mode=True)[brain_name]          
+            states = env_info.vector_observations               
+            agent.reset()
+            score = np.zeros(num_agents)
+            for t in range(max_t): 
+                actions = agent.act(states)                        # return actions for current states and policy
+                env_info = env.step(actions)[brain_name]           # send all actions to the environment
+                next_states = env_info.vector_observations         # get next state (for each agent)
+                rewards = env_info.rewards                         # get reward (for each agent)
+                dones = env_info.local_done                        # see if episode finished
+                
+                #for state, action, reward, next_state, done in zip(states, actions, rewards, next_states, dones):
+                agent.step(states[0], actions[0], rewards[0], next_states[0], dones[0])
+                
+                states = next_states
+                score += rewards
+                if np.any(dones):                                  # exit loop if episode finished
+                    break
+            
+            scores_deque.append(score)
+            scores.append(score)
+            
+            print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_deque)), end="")
+            if i_episode % print_every == 0:
+                print('\rEpisode {} Mean Score: {:.2f} Average Score: {:.2f}'.format(i_episode, np.mean(score), np.mean(scores_deque)))
+            if np.mean(scores_deque) >= 30:
+                print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_deque)))
+                torch.save(agent.actor_local.state_dict(), 'checkpoint_actor.pth')
+                torch.save(agent.critic_local.state_dict(), 'checkpoint_critic.pth')
+                break
+                
+        return scores
     ```
     ### Plot the cumulated scores as a function of episodes
     ```
@@ -208,15 +324,16 @@
     env.close()
     ```
 
-## Implementation - dqn_agent.py <a name="impl_agent"></a>
-- Open Python file ```dqn_agent.py```
+## Implementation - ddpg_agent.py <a name="impl_agent"></a>
+- Open Python file ```notebooks_python/ddpg_agent.py```
     ### Load important libraries
     ```
     import numpy as np
     import random
+    import copy
     from collections import namedtuple, deque
 
-    from model import QNetwork
+    from model import Actor, Critic
 
     import torch
     import torch.nn.functional as F
@@ -224,221 +341,309 @@
     ```
     ### Hyperparameters
     ```
-    BUFFER_SIZE = int(1e5)  # replay buffer size
-    BATCH_SIZE = 64         # minibatch size
+    BUFFER_SIZE = int(1e6)  # replay buffer size
+    BATCH_SIZE = 128        # minibatch size
     GAMMA = 0.99            # discount factor
     TAU = 1e-3              # for soft update of target parameters
-    LR = 5e-4               # learning rate 
-    UPDATE_EVERY = 4        # how often to update the network
-    PER_ALPHA = 0.6         # importance sampling exponent
-    PER_BETA = 0.4          # prioritization exponent
+    LR_ACTOR = 1e-4         # learning rate of the actor
+    LR_CRITIC = 1e-3        # learning rate of the critic
+    WEIGHT_DECAY = 0        # L2 weight decay
+    EPSILON = 1.0           # Epsilon value
+    EPSILON_DECAY = 0.999999 # Epsilon Decay
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     ```
-    ### Weighted loss function for PrioritizedReplayBuffer
-    ```
-    def weighted_mse_loss(input, target, weights):
-        """ Return the weighted mse loss to be used by Prioritized experience replay
-
-            INPUTS: 
-            ------------
-                input - (torch.Tensor)
-                target - (torch.Tensor)
-                weights - (torch.Tensor)
-
-            OUTPUTS:
-            ------------
-                loss - (torch.Tensor)
-        """
-
-        # source: http://
-        # forums.fast.ai/t/how-to-make-a-custom-loss-function-pytorch/9059/20
-        out = (input-target)**2
-        out = out * weights.expand_as(out)
-        loss = out.mean(0)  # or sum over whatever dimensions
-
-        return loss
-    ```
-    ### Main class 'DQNAgent' to train an agent getting smart
+    
+    ### Main class 'Agent' to train an agent getting smart
     - **init** function:
-        - design the QNetwork based on the numbers state_size=37 and action_size=4, see model.py for more information
+        - design the DDPG-Network based on the numbers state_size=33 and action_size=4, see model.py for more information
+        - 4 neural networks (2 for Actor, 2 for Critic)
+            - self.actor_local
+            - self.actor_target
+            - self.critic_local
+            - self.critic_target
         - use Adam optimizer (minibatch SGD with adaptive learning rate, momentum)
-        - Initialize Replaybuffer: for storing each experienced tuple in this buffer. This buffer helps to reduce correlation between consecutive experience tuples, by random sampling of experiences from this buffer
+        - initialize Ornstein-Uhlenbeck noise  
+        - initialize epsilon for epsilon-greedy policies
+        - initialize Replaybuffer: for storing each experienced tuple in this buffer. This buffer helps to reduce correlation between consecutive SARS tuples, by random sampling of experiences from this buffer
 
     - **step** function:
-        - update the agent's knowledge, using the most recently sampled tuple
-        - save this experience in replay memory **self.memory**
+        - save experience in replay memory **self.memory**
+        - use random sample from buffer to learn
         - structure of **experiences** (tuple of torch tensors):
             ```
             (
-                tensor([[37x floats for state], x 64 for minibatch]),
-                tensor([[1x int for action], x 64 for minibatch]),
-                tensor([[1x float for reward], x 64 for minibatch]),
-                tensor([[37x floats for next_state], x 64 for minibatch]),
-                tensor([[1x int for done], x 64 for minibatch])
+                tensor([[33x floats for state], x self.batch_size for minibatch]),
+                tensor([[4x int for action], x self.batch_size for minibatch]),
+                tensor([[1x float for reward], x self.batch_size for minibatch]),
+                tensor([[33x floats for next_state], x self.batch_size for minibatch]),
+                tensor([[1x int for done], x self.batch_size for minibatch])
             )
             ```
-        - learn every UPDATE_EVERY time steps (by doing random sampling from Replaybuffer)
+        (- learn every UPDATE_EVERY time steps (by doing random sampling from Replaybuffer))
+        - if ReplayBuffer is larger than self.batch_size sample from Replaybuffer 
     
     - **act** function:
-        - returns actions for given state as per current policy
-        - convert state as numpy arrray to torch tensor
-        - set model to evaluation mode (no optimizer step, no backpropagation), get action values as Fixed Targets
-        - set model back to train mode, use these Fixed Targets to initiate an epsilon greedy action selection
-
+        - returns a **clipped_action** for given state and current policy
+        - **actor_local** is used to find the best action
+        - convert **state** from numpy array to torch tensor
+        - set **actor_local model** to evaluation mode (no optimizer step, no backpropagation)
+        - get action values as Fixed Targets
+        - set **actor_local model** back to train mode
+        - optional: add Ornstein-Uhlenbeck noise 
+        - initiate an epsilon greedy action selection
+        - limit action to a **clipped_action**
+        
     - **learn** function:
-        - update value parameters using given batch of experience tuples
-        - compute and minimize the loss
-        - get max predicted Q values (for next states) from target model
+        - update policy and value parameters using given batch of experience tuples
+        - Input: **experiences** (tuple of torch tensors):
+            ```
+            (
+                tensor([[33x floats for states], x self.batch_size for minibatch]),
+                tensor([[4x int for actions], x self.batch_size for minibatch]),
+                tensor([[1x float for rewards], x self.batch_size for minibatch]),
+                tensor([[33x floats for next_states], x self.batch_size for minibatch]),
+                tensor([[1x bool for dones], x self.batch_size for minibatch])
+            )
+            ```
+        - compute and minimize the loss for **actor** and **critic**
+            1. **Update local critic**
+                - get max predicted **Q_targets_next** (for next states) from **critic target model**
+                    ```
+                    Q_targets_next = self.critic_target(next_states, actions_next)
 
-            ```
-            RESULT structure for Q_targets_next:
-            tensor([[1x float for Q value], x 64 for minibatch])
-            ```
-        - compute Q targets for current states 
-            ```
-            RESULT structure for Q_targets:
-            tensor([[1x float for Q value], x 64 for minibatch])
-            ```
-        - get expected Q values from local model
-            RESULT structure for Q_expected:
-            ```
-            tensor([[1x float for Q value], x 64 for minibatch])
-            ```
-        - compute loss
-        - minimize loss
-        - update target network, see soft_update function
+                    RESULT structure for Q_targets_next:
+                    tensor([[1x float], x self.batch_size for minibatch])
+                    ```
+                - compute **Q_targets** for current states 
+                    ```
+                    Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
+
+                    RESULT structure for Q_targets:
+                    tensor([[1x float], x self.batch_size for minibatch])
+                    ```
+                - get expected Q values **Q_expected** from **critic local model**
+                    ```
+                    Q_expected = self.critic_local(states, actions)
+
+                    RESULT structure for Q_expected:
+                    tensor([[1x float], x self.batch_size for minibatch])
+                    ```
+                - compute loss **critic_loss**
+                    ```
+                    F.mse_loss(Q_expected, Q_targets)
+
+                    RESULT structure for critic_loss:
+                    tensor(1x float)
+                    ```
+                - minimize loss
+                    ```
+                    self.critic_optimizer.zero_grad() 
+                    critic_loss.backward()
+                    ```
+                - update **local critic network**
+                    ```
+                    self.critic_optimizer.step()
+                    ```
+            
+            2. **Update local actor**
+                - Forward pass: Input states, output **actions_pred**
+                    ```
+                    actions_pred = self.actor_local(states)
+
+                    RESULT structure for actions_pred:
+                    tensor([[4x float], x self.batch_size for minibatch])
+                    ```
+                - Compute **actor_loss** via critic local
+                    ```
+                    actor_loss = -self.critic_local(states, actions_pred).mean()
+
+                    RESULT structure for actor_loss:
+                    tensor(1x float)
+                    ```
+                - minimize the loss
+                    ```
+                    self.actor_optimizer.zero_grad()
+                    actor_loss.backward()
+                    ```
+                - update **local actor network**
+                    ```
+                    self.actor_optimizer.step()
+                    ```
+            
+            3. **Soft Updates of target networks**
+                - Update target critic and actor
+                    ```
+                    self.soft_update(self.critic_local, self.critic_target, TAU)
+                    self.soft_update(self.actor_local, self.actor_target, TAU)
+                    ```
 
     - **soft_update** function:
         - soft update model parameters
+        - Soft Update strategy consists of **slowly blending local (regular) network weights with target network weights** 
     ```
-    class DQNAgent():
-        """ Interacts with and learns from the environment."""
+    class Agent():
+        """Interacts with and learns from the environment."""
 
-        def __init__(self, state_size, action_size, seed):
-            """ Initialize an Agent object.
-            
-                INPUTS: 
+        def __init__(self, state_size, action_size, random_seed):
+            """Initialize an Agent object.
+
+                INPUTS:
                 ------------
                     state_size - (int) dimension of each state
                     action_size - (int) dimension of each action
-                    seed - (int) random seed
-                
+                    random_seed - (int) random seed
+
                 OUTPUTS:
                 ------------
-                    no direct
+                    No direct
             """
-            
+            print('Training on ', device)
+            print()
+
             self.state_size = state_size
             self.action_size = action_size
-            self.seed = random.seed(seed)
+            self.seed = random.seed(random_seed)
 
-            # Q-Network
-            self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
-            self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
-            self.optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
+            # Actor Network (w/ Target Network)
+            self.actor_local = Actor(state_size, action_size, random_seed).to(device)
+            self.actor_target = Actor(state_size, action_size, random_seed).to(device)
+            self.actor_optimizer = optim.Adam(self.actor_local.parameters(), lr=LR_ACTOR)
+
+            # Critic Network (w/ Target Network)
+            self.critic_local = Critic(state_size, action_size, random_seed).to(device)
+            self.critic_target = Critic(state_size, action_size, random_seed).to(device)
+            self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
+
+            # Noise process
+            self.noise = OUNoise(action_size, random_seed)
+
+            self.epsilon = EPSILON
 
             # Replay memory
-            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
-            # Initialize time step (for updating every UPDATE_EVERY steps)
-            self.t_step = 0
-        
-        def step(self, state, action, reward, next_state, done):
-            """ Update the agent's knowledge, using the most recently sampled tuple.
-            
-                INPUTS: 
-                ------------
-                    state - (numpy array_like) the previous state of the environment (37,)
-                    action - (int) the agent's previous choice of action
-                    reward - (float) last reward received
-                    next_state - (array_like) the current state of the environment
-                    done - (bool) whether the episode is complete (True or False)
-                
-                OUTPUTS:
-                ------------
-                    no direct
-            """
-            # Save experience in replay memory
-            self.memory.add(state, action, reward, next_state, done)
-            
-            # Learn every UPDATE_EVERY time steps.
-            self.t_step = (self.t_step + 1) % UPDATE_EVERY
-            if self.t_step == 0:
-                # If enough samples are available in memory, get random subset and learn
-                if len(self.memory) > BATCH_SIZE:
-                    experiences = self.memory.sample()
-                    #print('experiences')
-                    #print(experiences)
-                    self.learn(experiences, GAMMA)
+            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
 
-        def act(self, state, eps=0.):
-            """ Returns actions for given state as per current policy.
-            
+            print('------- ACTOR ------')
+            print('self.actor_local',self.actor_local)
+            print()
+            print('self.actor_target',self.actor_target)
+            print()
+            print('self.actor_optimizer',self.actor_optimizer)
+            print()
+            print('------- CRITIC ------')
+            print('self.critic_local',self.critic_local)
+            print()
+            print('self.critic_target',self.critic_target)
+            print()
+            print('self.critic_optimizer',self.critic_optimizer)
+            print()
+
+        def step(self, state, action, reward, next_state, done):
+            """ Save experience in replay memory, and use random sample from buffer to learn.
+
                 INPUTS:
                 ------------
-                    state - (numpy array_like) current state
-                    eps - (float) epsilon, for epsilon-greedy action selection
+                    state - (numpy array) with shape (33,) state vector for the actual agent
+                    action - (numpy array) with shape (4,) actual action values for the agent
+                    reward - (float) actual reward
+                    next_state - (numpy array) with shape (33,) next state vector for the actual agent
+                    done - (bool) if True epsiode is finished for the agent
 
                 OUTPUTS:
                 ------------
-                    act_select - (int) next epsilon-greedy action selection
+                    No direct
             """
-            # Convert state from numpy array to torch tensor
-            state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        
-            # Set model to evaluation (no optimizer step, no backpropagation), get action values as Fixed Targets
-            self.qnetwork_local.eval()
+
+            # Save experience / reward
+            self.memory.add(state, action, reward, next_state, done)
+
+            # Learn, if enough samples are available in memory
+            if len(self.memory) > BATCH_SIZE:
+                experiences = self.memory.sample()
+                self.learn(experiences, GAMMA)
+
+        def act(self, state, add_noise=True):
+            """ Returns actions for given state as per current policy.
+
+                INPUTS:
+                ------------
+                    state - (numpy array) with shape (1,33), a vector with 33 float values, contains the agent's position, rotation, velocity, angular-velocity of the arm. Given this information, the agent has to learn how to best select actions.
+                    add_noise - (bool) if True add noise to chosen action based on Ornstein-Uhlenbeck
+
+                OUTPUTS:
+                ------------
+                    clipped_action - (numpy array) with shape (1,4) each value of action is clipped withion (-1, 1)
+            """
+           
+            state = torch.from_numpy(state).float().to(device)
+            self.actor_local.eval()
             with torch.no_grad():
-                action_values = self.qnetwork_local(state)
-
-            # Set model back to train, use these Fixed Targets to initiate an epsilon greedy action selection
-            self.qnetwork_local.train()
-
-            # Epsilon-greedy action selection
-            if random.random() > eps:
-                act_select = np.argmax(action_values.cpu().data.numpy())
-                return act_select
+                action = self.actor_local(state).cpu().data.numpy()
+            self.actor_local.train()
+            if add_noise:
+                action += self.noise.sample()
+                action *=  self.epsilon
             else:
-                act_select = random.choice(np.arange(self.action_size))
-                return act_select
+                action *=  self.epsilon
+
+            clipped_action = np.clip(action, -1, 1)
+
+            return clipped_action
+
+        def reset(self):
+            self.noise.reset()
 
         def learn(self, experiences, gamma):
-            """ Update value parameters using given batch of experience tuples.
+            """ Update policy and value parameters using given batch of experience tuples.
+                Q_targets = r + γ * critic_target(next_state, actor_target(next_state))
+                where:
+                    actor_target(state) -> action
+                    critic_target(state, action) -> Q-value
 
                 INPUTS:
                 ------------
-                    experiences - (Tuple[torch.Variable]) tuple of (s, a, r, s', done) tuples 
+                    experiences - (Tuple[torch.Tensor]) tuple of (s, a, r, s', done) tuples
                     gamma - (float) discount factor
 
                 OUTPUTS:
                 ------------
+                    No direct
             """
+           
             states, actions, rewards, next_states, dones = experiences
 
-            # Compute and minimize the loss
-
-            # Get max predicted Q values (for next states) from target model
-            Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-            print(Q_targets_next)
-            
-            # Compute Q targets for current states 
+            # ---------------------------- update critic ---------------------------- #
+            # Get predicted next-state actions and Q values from target models
+            actions_next = self.actor_target(next_states)
+            Q_targets_next = self.critic_target(next_states, actions_next)
+            # Compute Q targets for current states (y_i)
             Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
-            print(Q_targets)
-
-            # Get expected Q values from local model
-            Q_expected = self.qnetwork_local(states).gather(1, actions)
-            print(Q_expected)
-
-            # Compute loss
-            loss = F.mse_loss(Q_expected, Q_targets)
+            # Compute critic loss
+            Q_expected = self.critic_local(states, actions)
+            critic_loss = F.mse_loss(Q_expected, Q_targets)
 
             # Minimize the loss
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+            self.critic_optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic_optimizer.step()
 
-            # ------------------- update target network ------------------- #
-            self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
+            # ---------------------------- update actor ---------------------------- #
+            # Compute actor loss
+            actions_pred = self.actor_local(states)
+            actor_loss = -self.critic_local(states, actions_pred).mean()
+
+            # Minimize the loss
+            self.actor_optimizer.zero_grad()
+            actor_loss.backward()
+            self.actor_optimizer.step()
+
+            # ----------------------- update target networks ----------------------- #
+            self.soft_update(self.critic_local, self.critic_target, TAU)
+            self.soft_update(self.actor_local, self.actor_target, TAU)
+
+            # ----------------------- update epsilon / noise ----------------------- #
+            self.epsilon *= EPSILON_DECAY
+            self.reset()
 
         def soft_update(self, local_model, target_model, tau):
             """ Soft update model parameters.
@@ -448,381 +653,132 @@
                 ------------
                     local_model - (PyTorch model) weights will be copied from
                     target_model - (PyTorch model) weights will be copied to
-                    tau - (float) interpolation parameter 
-                    
+                    tau - (float) interpolation parameter
+
                 OUTPUTS:
                 ------------
-                    no direct
-                    
+                    No direct
             """
+
             for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
                 target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
     ```
-    ### Main class 'DDQNAgent' to train an agent getting smart with Dual DQN
-    - **init** function:
-        - design the QNetwork based on the numbers state_size=37 and action_size=4, see model.py for more information
-        - use Adam optimizer (minibatch SGD with adaptive learning rate, momentum)
-        - inherit all functions from DQNAgent (exept learn-function)
-        - initialize PrioritizedReplaybuffer: for storing each experienced tuple in this buffer. This buffer helps to reduce correlation between consecutive experience tuples, by random sampling of experiences from this buffer, however take **most likely actions via Prioritization**
-    - **learn** function:
-        - get max predicted Q values (for next states) from target model
-        - calculate TD error
-        - minimize the loss
-    ```
-    class DDQNAgent(DQNAgent):
-        """ Implementation of a DDQN agent that interacts with and learns from the environment
-        """
-
-        def __init__(self, state_size, action_size, seed, state_dict=None):
-            """ Initialize an DoubleDQNAgent object
-
-                INPUTS:
-                ------------
-                    state_size - (int) dimension of each state
-                    action_size - (int) dimension of each action
-                    seed - (int) random seed
-
-                OUTPUTS:
-                ------------
-                    no direct
-            """
-            super(DDQNAgent, self).__init__(state_size, action_size, seed, state_dict=None)
-
-            # In case of a trained model
-            if state_dict != None:
-                weights = torch.load(state_dict)
-                self.qnetwork_local.load_state_dict(weights)
-                self.qnetwork_target.load_state_dict(weights)
-
-            # Replay memory
-            self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
-            # Initialize time step (for updating every UPDATE_EVERY steps)
-            self.t_step = 0
-
-        def learn(self, experiences, gamma):
-            """ Update value parameters using given batch of experience tuples
-
-                INPUTS:
-                ------------
-                    experiences - (Tuple[torch.Variable]) tuple of (s, a, r, s', done) tuples
-                    gamma - (float) discount factor
-
-                OUTPUTS:
-                ------------
-                    no direct
-            """
-
-            states, actions, rewards, next_states, dones = experiences
-
-            ## Compute and minimize the loss
-
-            # arg max_{a} \hat{Q}(s_{t+1}, a, θ_t)
-            argmax_actions = self.qnetwork_local(next_states).detach().max(1)[1].unsqueeze(1)
-
-            # Get max predicted Q values (for next states) from target model
-            # Q_targets_next :=  \hat{Q}(s_{t+1}, argmax_actions, θ^−)
-            Q_targets_next = self.qnetwork_target(next_states).gather(1, argmax_actions)
-            #print(Q_targets_next)
-
-            # Compute Q targets for current states
-            Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
-            #print(Q_targets)
-
-            # Get expected Q values from local model
-            Q_expected = self.qnetwork_local(states).gather(1, actions)
-            #print(Q_expected)
-
-            # Compute loss
-            loss = F.mse_loss(Q_expected, Q_targets)
-
-
-            # Minimize the loss
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-
-
-            # ------------------- update target network ------------------- #
-            self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
-    ```
-    ### Main class 'PRBDDQNAgent' to train an agent getting smart with PrioritizedBufferReplay Dual DQN
-    - **init** function:
-        - design the QNetwork based on the numbers state_size=37 and action_size=4, see model.py for more information
-        - use Adam optimizer (minibatch SGD with adaptive learning rate, momentum)
-        - inherit all functions from DQNAgent (exept learn-function)
-        - initialize PrioritizedReplaybuffer: for storing each experienced tuple in this buffer. This buffer helps to reduce correlation between consecutive experience tuples, by random sampling of experiences from this buffer, however take **most likely actions via Prioritization**
-    - **learn** function:
-        - get max predicted Q values (for next states) from target model
-        - calculate current beta
-        - get importance-sampling-weight
-        - calculate TD error
-        - update priorities
-        - calculate weighted loss
-        - minimize the loss
-    ```
-    class PRBDDQNAgent(DQNAgent):
-    """ Implementation of a DDQN agent that used prioritized experience replay
-    """
-
-    def __init__(self, state_size, action_size, seed, state_dict=None, alpha=PER_ALPHA, initial_beta=PER_BETA, max_t=1000):
-        """ Initialize an DDQNPREAgent object
-
-            INPUTS:
-            ------------
-                state_size - (int) dimension of each state
-                action_size - (int) dimension of each action
-                seed - (int) random seed
-                alpha - (float) importance sampling exponent
-                initial_beta - (float) prioritization exponent
-                max_t - (int) maximum time step
-
-            OUTPUTS:
-            ------------
-                no direct
-        """
-        super(PRBDDQNAgent, self).__init__(state_size, action_size, seed, state_dict=None)
-
-        # In case of a trained model
-        if state_dict != None:
-            weights = torch.load(state_dict)
-            self.qnetwork_local.load_state_dict(weights)
-            self.qnetwork_target.load_state_dict(weights)
-
-        # Replay memory
-        self.memory = PrioritizedReplayBuffer(action_size,
-                                              BUFFER_SIZE,
-                                              BATCH_SIZE,
-                                              seed,
-                                              alpha)
-
-        # Initialize time step (for updating every UPDATE_EVERY steps)
-        self.alpha = alpha
-        self.initial_beta = initial_beta
-        self.max_t = max_t
-        self.t_step = 0
-
-    def get_beta(self, t):
-        """ Return the current exponent β based on its schedul. Linearly anneal β
-            from its initial value β0 to 1, at the end of learning.
-
-            INPUTS:
-            ------------
-                t - (int) Current time step in the episode
-
-            OUTPUTS:
-            ------------
-                current_beta - (float) Current exponent beta
-        """
-        f_frac = min(float(t) / self.max_t, 1.0)
-        current_beta = self.initial_beta + f_frac * (1. - self.initial_beta)
-        return current_beta
-
-    def learn(self, experiences, gamma, t=1000):
-        """ Update value parameters using given batch of experience tuples.
-
-            INPUTS:
-            ------------
-                experiences - (Tuple[torch.Variable]) tuple of (s, a, r, s', done) tuples
-                gamma - (float) discount factor
-                t - (int) current time step in the episode
-
-            OUTPUTS:
-            ------------
-                no direct
-        """
-        states, actions, rewards, next_states, dones = experiences
-
-        ## Compute and minimize the loss
-
-        # Get max predicted Q values (for next states) from target model
-        Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-        #print(Q_targets_next)
-
-        # Compute Q targets for current states
-        Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
-        #print(Q_targets)
-
-        # Get expected Q values from local model
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
-        #print(Q_expected)
-
-        # compute importance-sampling weight wj
-        f_currbeta = self.get_beta(t)
-        weights = self.memory.get_is_weights(current_beta=f_currbeta)
-
-        # compute TD-error δj and update transition priority pj
-        td_errors = Q_targets - Q_expected
-        self.memory.update_priorities(td_errors)
-
-        # perform gradient descent step
-        # Accumulate weight-change ∆←∆+wj x δj x ∇θQ(Sj−1,Aj−1)
-        # loss = F.mse_loss(Q_expected*weights, Q_target*weights)
-        loss = weighted_mse_loss(Q_expected, Q_targets, weights)
-        # loss = F.mse_loss(Q_expected, Q_target)*weights
-        self.optimizer.zero_grad()  # Clear the gradients
-        loss.backward()
-        self.optimizer.step()
-
-        # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
-
-    ```
+  
     ### ReplayBuffer class to reduce consecutive experience tuple correlations
     - **init** function: initialize a ReplayBuffer object
     - **add** function: add an experience tuple to self.memory object
     - **sample** function: 
-        - choose per random one **experiences** tuple with batch_size experiences
-        - return states, actions, rewards, next_states and dones each as torch tensors
+        - create a random **experiences** sample (of type list) from **self.memory** ReplayBuffer instance with size **self.batch_size**
+        - structure of experience sample: list of named tuples **Experience** with length **self.batch_size**
+            ```
+            [
+                **Experience**(
+                            **state**=array([33 xfloat values]),
+                            **action**=array([4 x float values]),
+                            **reward**=1 x float,
+                            **next_state=array([33 x floatvalues])
+                            ),
+                **Experience**(
+                            **state**=array([33 xfloat values]),
+                            **action**=array([4 x float values]),
+                            **reward**=1 x float,
+                            **next_state=array([33 x floatvalues])
+                            ),
+                ... 
+            ]              
+            ```
+        - return **states**, **actions**, **rewards**, **next_states** and **dones** each as torch tensors
+        - structure of 
+            - **states**: torch tensor with shape (128,33)
+            - **actions**: torch tensor with shape (128,4)
+            - **rewards**: torch tensor with shape (128,1)
+            - **next_states**: torch tensor with shape (128,33)
+            - **dones**: torch tensor with shape (128,1)
+            ```
+            states: tensor([[ <float value,> x 33 ], x 128 ]) 
+            actions: tensor([[ <float value,> x 4 ], x 128 ]) 
+            rewards: tensor([[ <float value> ], x 128 ]) 
+            next_states: tensor([[ <float value,> x 33 ], x 128 ]) 
+            dones: tensor([[ <bool value> ], x 128 ]) 
+            ```
     - **__len__** function: return the current size of internal memory
     ```
     class ReplayBuffer:
-        """ Fixed-size buffer to store experience tuples."""
+        """ Fixed-size buffer to store experience tuples.
+        """
 
         def __init__(self, action_size, buffer_size, batch_size, seed):
             """ Initialize a ReplayBuffer object.
 
-            INPUTS:
-            ------------
-                action_size - (int) dimension of each action
-                buffer_size - (int) maximum size of buffer
-                batch_size - (int) size of each training batch
-                seed - (int) random seed
-                
-            OUTPUTS:
-            ------------
-                no direct
+                INPUTS:
+                ------------
+                    buffer_size - (int) maximum size of buffer
+                    batch_size - (int)size of each training batch
+
+                OUTPUTS:
+                ------------
+                    No direct
             """
+
             self.action_size = action_size
-            self.memory = deque(maxlen=buffer_size)  
+            self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
             self.batch_size = batch_size
             self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
             self.seed = random.seed(seed)
-        
+
         def add(self, state, action, reward, next_state, done):
             """ Add a new experience to memory.
-                
+
                 INPUTS:
                 ------------
-                    state - (array_like) the previous state of the environment
-                    action - (int) the agent's previous choice of action
-                    reward - (int) last reward received
-                    next_state - (int) the current state of the environment
-                    done - (bool) whether the episode is complete (True or False)
+                    state - ()
+                    action - ()
+                    reward - ()
+                    next_state - ()
+                    done - ()
+
+                    state - (numpy array) with shape (33,) state vector for the actual agent
+                    action - (numpy array) with shape (4,) actual action values for the agent
+                    reward - (float) actual reward
+                    next_state - (numpy array) with shape (33,) next state vector for the actual agent
+                    done - (bool) if True epsiode is finished for the agent
 
                 OUTPUTS:
                 ------------
-                    no direct
-            
+                    No direct
             """
+
             e = self.experience(state, action, reward, next_state, done)
             self.memory.append(e)
-        
+
         def sample(self):
             """ Randomly sample a batch of experiences from memory.
-            
+
                 INPUTS:
                 ------------
                     None
-                
+
                 OUTPUTS:
                 ------------
-                    states - (torch tensor) the previous states of the environment
-                    actions - (torch tensor) the agent's previous choice of actions
-                    rewards - (torch tensor) last rewards received
-                    next_states - (torch tensor) the next states of the environment
-                    dones - (torch tensor) bools, whether the episode is complete (True or False)
-            
+                    states - (torch tensor)
+                    actions - (torch tensor)
+                    rewards - (torch tensor)
+                    next_states - (torch tensor)
+                    dones - (torch tensor)
             """
+
             experiences = random.sample(self.memory, k=self.batch_size)
 
             states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
-            actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
+            actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).float().to(device)
             rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
             next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
             dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-    
+
             return (states, actions, rewards, next_states, dones)
 
         def __len__(self):
             """ Return the current size of internal memory.
-            
-                INPUTS:
-                ------------
-                    None
-                    
-                OUTPUTS:
-                ------------
-                    mem_size - (int) current size of internal memory
-            
-            """
-            mem_size = len(self.memory)
-            return mem_size
-    ```
-    ### PrioritizedReplayBuffer class to reduce consecutive experience tuple correlations and keep maximum likelihood action as choice
-    ```
-    class PrioritizedReplayBuffer(object):
-        """ Fixed-size buffer to store experience tuples
-        """
-
-        def __init__(self, action_size, buffer_size, batch_size, seed, alpha):
-            """ Initialize a PrioritizedReplayBuffer object
-
-                INPUTS:
-                ------------
-                    action_size - (int) dimension of each action
-                    buffer_size - (int) maximum size of buffer
-                    batch_size - (int) size of each training batch
-                    seed - (int) random seed
-                    alpha - (float) prioritized replay buffer hyperparameter, 0~1 indicating how much prioritization is used
-
-                OUTPUTS:
-                ------------
-                    no direct
-            """
-
-            self.action_size = action_size
-            self.memory = deque(maxlen=buffer_size)
-            self.batch_size = batch_size
-            self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
-            self.seed = random.seed(seed)
-            
-            # specifics
-            self.alpha = max(0., alpha)  # alpha should be >= 0
-            self.priorities = deque(maxlen=buffer_size)
-            self._buffer_size = buffer_size
-            self.cum_priorities = 0.
-            self.eps = 1e-6
-            self._indexes = []
-            self.max_priority = 1.**self.alpha
-
-        def add(self, state, action, reward, next_state, done):
-            """ Add a new experience to memory
-
-                INPUTS:
-                ------------
-                    state - (array_like) the previous state of the environment
-                    action - (int) the agent's previous choice of action
-                    reward - (int) last reward received
-                    next_state - (int) the current state of the environment
-                    done - (bool) whether the episode is complete (True or False)
-
-                OUTPUTS:
-                ------------
-                    no direct
-
-            """
-            e = self.experience(state, action, reward, next_state, done)
-            self.memory.append(e)
-            # exclude the value that will be discareded
-            if len(self.priorities) >= self._buffer_size:
-                self.cum_priorities -= self.priorities[0]
-            # include the max priority possible initialy
-            self.priorities.append(self.max_priority)  # already use alpha
-            # accumulate the priorities abs(td_error)
-            self.cum_priorities += self.priorities[-1]
-
-        def sample(self):
-            """ Sample a batch of experiences from memory according to importance-sampling weights
 
                 INPUTS:
                 ------------
@@ -830,91 +786,11 @@
 
                 OUTPUTS:
                 ------------
-                    tuple[torch.Tensor]. Sample of past experiences
-            """
-            i_len = len(self.memory)
-            na_probs = None
-            if self.cum_priorities:
-                na_probs = np.array(self.priorities)/self.cum_priorities
-            l_index = np.random.choice(i_len,
-                                    size=min(i_len, self.batch_size),
-                                    p=na_probs)
-            self._indexes = l_index
-
-            experiences = [self.memory[ii] for ii in l_index]
-
-            states = torch.from_numpy(np.vstack([e.state for e in experiences if e is not None])).float().to(device)
-            actions = torch.from_numpy(np.vstack([e.action for e in experiences if e is not None])).long().to(device)
-            rewards = torch.from_numpy(np.vstack([e.reward for e in experiences if e is not None])).float().to(device)
-            next_states = torch.from_numpy(np.vstack([e.next_state for e in experiences if e is not None])).float().to(device)
-            dones = torch.from_numpy(np.vstack([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-
-            return (states, actions, rewards, next_states, dones)
-
-        def _calculate_is_w(self, f_priority, current_beta, max_weight, i_n):
-            #  wi= ((N x P(i)) ^ -β)/max(wi)
-            f_wi = (i_n * f_priority/self.cum_priorities)
-            return (f_wi ** -current_beta)/max_weight
-
-        def get_is_weights(self, current_beta):
-            """ Return the importance sampling (IS) weights of the current sample based on the beta passed
-
-                INPUTS:
-                ------------
-                    current_beta - (float) fully compensates for the non-uniform probabilities P(i) if β = 1
-
-                OUTPUTS:
-                ------------
-                    torch tensor of is_weights
-            """
-            # calculate P(i) to what metters
-            i_n = len(self.memory)
-            max_weight = (i_n * min(self.priorities) / self.cum_priorities)
-            max_weight = max_weight ** -current_beta
-
-            this_weights = [self._calculate_is_w(self.priorities[ii],
-                                                current_beta,
-                                                max_weight,
-                                                i_n)
-                            for ii in self._indexes]
-
-            return torch.tensor(this_weights,
-                                device=device,
-                                dtype=torch.float).reshape(-1, 1)
-
-        def update_priorities(self, td_errors):
-            """ Update priorities of sampled transitions inspiration: https://bit.ly/2PdNwU9
-
-                INPUTS:
-                ------------
-                    td_errors - (tuple of torch.tensors) TD-Errors of last samples
-
-                OUTPUTS:
-                ------------
-                    no direct
+                    current_size - (int) length of self.memory
             """
 
-            for i, f_tderr in zip(self._indexes, td_errors):
-                f_tderr = float(f_tderr)
-                self.cum_priorities -= self.priorities[i]
-                # transition priority: pi^α = (|δi| + ε)^α
-                self.priorities[i] = ((abs(f_tderr) + self.eps) ** self.alpha)
-                self.cum_priorities += self.priorities[i]
-            self.max_priority = max(self.priorities)
-            self._indexes = []
-
-        def __len__(self):
-            """ Return the current size of internal memory
-
-                INPUTS:
-                ------------
-                    None
-
-                OUTPUTS:
-                ------------
-                    len(self.memory) - (int) Length of accumulated memory
-            """
-            return len(self.memory)
+            current_size = len(self.memory)
+            return current_size
     ```
 
 
@@ -923,62 +799,155 @@
 - Open Python file ```model.py```
     ### Import important libraries
     ```
+    import numpy as np
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
     ```
-    ### Create a Pytorch model as a deep QNetwork
+    ### Create a Pytorch Actor Policy model as a deep QNetwork
     - **init** function: Initialize parameters and build model
-    - **forward** function: create a forward pass, i.e. build a network that maps state -> action values
+    - **reset_parameters** function: Reset the parameters of the network (random uniform distribution)
+    - **forward** function: 
+        - create a forward pass, i.e. build a network that maps **state -> action values**
+        - use Batchnormalization to enhance covergence (faster learning)
+        - use tanh as an output activation function to clip action values between -1 and 1
     - **Architecture**:
         - Three fully connected layers
-            - 1st hidden layer: fully connected, 37 input unit units, 64 output units, rectified via ReLU
-            - 2nd hidden layer: fully connected, 64 input unit units, 64 output units, rectified via ReLU
-            - 3rd hidden layer: fully connected, 64 input unit units, 4 output units
+            - 1st hidden layer: fully connected, 33 input units, fc1_units output units, rectified via ReLU
+            - 2nd hidden layer: fully connected, fc1_units input units, fc2_units output units, rectified via ReLU
+            - 3rd hidden layer: fully connected, fc2_units input units, 4 output units
     ```
-    class QNetwork(nn.Module):
-        """ Actor (Policy) Model
+    class Actor(nn.Module):
+        """ Actor (Policy) Model."""
+
+        def __init__(self, state_size, action_size, seed, fc1_units=400, fc2_units=300):
+            """ Initialize parameters and build model
+
+                INPUTS:
+                ------------
+                    state_size - (int) Dimension of each state
+                    action_size - (int) Dimension of each action
+                    seed - (int) Random seed
+                    fc1_units - (int) Number of nodes in first hidden layer
+                    fc2_units - (int) Number of nodes in second hidden layer
+
+                OUTPUTS:
+                ------------
+                    No direct
+            """
+            super(Actor, self).__init__()
+            self.seed = torch.manual_seed(seed)
+            self.fc1 = nn.Linear(state_size, fc1_units)
+            self.batch_norm = nn.BatchNorm1d(fc1_units)       # Use batch normalization
+            self.fc2 = nn.Linear(fc1_units, fc2_units)
+            self.fc3 = nn.Linear(fc2_units, action_size)
+            self.reset_parameters()
+
+        def reset_parameters(self):
+            """ Reset the parameters of the network (random uniform distribution)
+
+                INPUTS:
+                ------------
+                    None
+
+                OUTPUTS:
+                ------------
+                    No direct
+            """
+            self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
+            self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+            self.fc3.weight.data.uniform_(-3e-3, 3e-3)
+
+        def forward(self, state):
+            """ Build an actor (policy) network that maps states -> actions.
+
+                INPUTS:
+                ------------
+                    state - (torch tensor) --> tensor([[33x floats for states], x size of minibatch])
+
+                OUTPUTS:
+                ------------
+                    actions - (torch tensor) --> tensor([[4x floats], x size of minibatch])
+            """
+            x = F.relu(self.batch_norm(self.fc1(state)))
+            x = F.relu(self.fc2(x))
+            actions = F.tanh(self.fc3(x))
+            return actions
+    ```
+    ### Create a Pytorch Critic (Value) model as a deep QNetwork
+    - **init** function: Initialize parameters and build model
+    - **reset_parameters** function: Reset the parameters of the network (random uniform distribution)
+    - **forward** function: 
+        - create a forward pass, i.e. build a network that maps **state -> Q-values**
+        - use Batchnormalization to enhance covergence (faster learning)
+        - concat states with action values to create state-action pairs 
+    - **Architecture**:
+        - Three fully connected layers
+            - 1st hidden layer: fully connected, 33 input units, fcs1_units output units, rectified via ReLU
+            - 2nd hidden layer: fully connected, fcs1_units input units, fc2_units output units, rectified via ReLU
+            - 3rd hidden layer: fully connected, fc2_units input units, 1 output unit
+    ```
+    class Critic(nn.Module):
+        """ Critic (Value) Model
         """
 
-        def __init__(self, state_size, action_size, seed, fc1_units=64, fc2_units=64):
-            """ Initialize parameters and build model.
-                
+        def __init__(self, state_size, action_size, seed, fcs1_units=400, fc2_units=300):
+            """ Initialize parameters and build model
+
                 INPUTS:
                 ------------
                     state_size (int): Dimension of each state
                     action_size (int): Dimension of each action
                     seed (int): Random seed
-                    fc1_units (int): Number of nodes in first hidden layer
-                    fc2_units (int): Number of nodes in second hidden layer
-                    
+                    fcs1_units (int): Number of nodes in the first hidden layer
+                    fc2_units (int): Number of nodes in the second hidden layer
+
                 OUTPUTS:
                 ------------
-                    no direct
+                    No direct
             """
-            super(QNetwork, self).__init__()
+            super(Critic, self).__init__()
             self.seed = torch.manual_seed(seed)
-           
-            self.fc1 = nn.Linear(state_size, fc1_units)
-            self.fc2 = nn.Linear(fc1_units, fc2_units)
-            self.fc3 = nn.Linear(fc2_units, action_size)
-            
+            self.fcs1 = nn.Linear(state_size, fcs1_units)
+            self.batch_norm = nn.BatchNorm1d(fcs1_units)
+            self.fc2 = nn.Linear(fcs1_units+action_size, fc2_units)
+            self.fc3 = nn.Linear(fc2_units, 1)
+            self.reset_parameters()
 
-        def forward(self, state):
-            """ Build a network that maps state -> action values.
-                
+        def reset_parameters(self):
+            """ Reset the parameters of the network (random uniform distribution)
+
                 INPUTS:
                 ------------
-                    state - (array-like) actual 
-                    
+                    None
+
                 OUTPUTS:
                 ------------
-                    output - (array-like) action values for given state set
+                    No direct
             """
-            x = F.relu(self.fc1(state))
+            self.fcs1.weight.data.uniform_(*hidden_init(self.fcs1))
+            self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
+            self.fc3.weight.data.uniform_(-3e-3, 3e-3)
+
+        def forward(self, state, action):
+            """ Build a critic (value) network that maps (state, action) pairs -> Q-values.
+
+                INPUTS:
+                ------------
+                    state - (torch tensor) --> tensor([[33x floats], x size of minibatch])
+                    action - (torch tensor) --> tensor([[4x floats], x size of minibatch])
+
+                OUTPUTS:
+                ------------
+                    Q_values - (torch tensor) --> tensor([[1x float], x size of minibatch])
+            """
+            xs = F.relu(self.batch_norm(self.fcs1(state)))
+            x = torch.cat((xs, action), dim=1)
             x = F.relu(self.fc2(x))
-            output = self.fc3(x)
-            return output
+            Q_values = self.fc3(x)
+            return Q_values
     ```
+    
 ## Implementation - Navigation_Trained_Agent.ipynb <a name="impl_notebook_trained_agent"></a> 
 - Open Jupyter Notebook ```Navigation_Trained_Agent.ipynb```
     ### Import important libraries
