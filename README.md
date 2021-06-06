@@ -17,16 +17,16 @@
 - This project is part of the Udacity Nanodegree program 'Deep Reinforcement Learning'. Please check this [link](https://www.udacity.com/course/deep-reinforcement-learning-nanodegree--nd893?utm_source=gsem_brand&utm_medium=ads_r&utm_campaign=12906460312_c&utm_term=121838875579&utm_keyword=deep%20reinforcement%20udacity_e&gclid=CjwKCAjw-e2EBhAhEiwAJI5jg7Ycb934lFlosCFVpvwKRD_U5ESjMX18faGkkTTUkIyZVJ6yU4HkohoCyfIQAvD_BwE) for more information.
 
 ## Unity Environment <a name="unitity_env"></a>
-- [Unity Machine Learning Agents (ML-Agents)](https://github.com/Unity-Technologies/ml-agents) is an open-source Unity plugin that enables games and simulations to serve as environments for training intelligent agents. 
+- [Unity Machine Learning Agents (ML-Agents)](https://github.com/Unity-Technologies/ml-agents) is an open-source Unity plugin that enables games and simulations to serve as environments for training intelligent agents.
 - Implementations (based on PyTorch) of state-of-the-art algorithms to enable game developers and hobbyists to easily train intelligent agents for 2D, 3D and VR/AR games
 - For this project, an **agent should be trained to keep track on a moving target**.
 - There are two versions of the environment:
     - **Option 1**: In order to solve the environment, **one single agent** must get an average score of +30 over 100 consecutive episodes.
     - **Option 2**: In order to solve the environment, **multiple agents** must get an average score of +30 over 100 consecutive episodes and overr all agents.
 - Here: Option 1 is chosen (single agent version)
-- A **reward** of **+0.1** is provided for for each step that the agent's hand is in the goal location. 
+- A **reward** of **+0.1** is provided for for each step that the agent's hand is in the goal location.
 - **Goal**: Thus, the goal of your agent is to maintain its position at the target location for as many time steps as possible.
-- The **state space** has **33 dimensions** and contains the **agent's position**, **rotation**, **velocity**, **angular-velocity** of the arm. Given this information, the agent has to learn how to best select actions. 
+- The **state space** has **33 dimensions** and contains the **agent's position**, **rotation**, **velocity**, **angular-velocity** of the arm. Given this information, the agent has to learn how to best select actions.
 - Each **action** is a vector with four numbers
 - Every **entry in the action vector** must be a number between **-1 and 1**.
     ```
@@ -46,19 +46,19 @@
             Number of stacked Vector Observation: 1
             Vector Action space type: continuous
             Vector Action space size (per agent): 4
-            Vector Action descriptions: , , , 
+            Vector Action descriptions: , , ,
     ```
 - The task is **episodic**, and in order to solve the environment, the agent **must get an average score of +30 over 100 consecutive episodes**.
 
 ## Some further optimizations
 - Check out the [DDPG paper](Continuous control with deep reinforcement learning) to master all of the details.
-- **Trust Region Policy Optimization (TRPO)** and **Truncated Natural Policy Gradient (TNPG)** should achieve better performance as demosntrated in [this paper](https://arxiv.org/abs/1604.06778). 
+- **Trust Region Policy Optimization (TRPO)** and **Truncated Natural Policy Gradient (TNPG)** should achieve better performance as demosntrated in [this paper](https://arxiv.org/abs/1604.06778).
 - **Proximal Policy Optimization (PPO)**, has also demonstrated good performance with continuous control tasks as shown [here](https://openai.com/blog/openai-baselines-ppo/).
 - Good performance als shown for **Distributed Distributional Deterministic Policy Gradients** in [this paper](https://openreview.net/forum?id=SyZipzbCb).
 
 ## Files in the repo <a name="files_in_repo"></a>
 The workspace contains the following files:
-- **README.md**: Markdown file, the readme of this repo. 
+- **README.md**: Markdown file, the readme of this repo.
 - **Report.md**: Markdown file, a detailed description of the code implementation.
 - **requiremens.txt**: txt file containing python packages needed for this repo.  
 - **/notebooks_python/Continuous_Control.ipynb**: Main notebook file to implement DQN and to train the agent.
@@ -99,7 +99,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 - Change Directory
     ```
-    $ cd Unitiy-Continuous-Control-Project
+    $ cd Deep-Reinforcement-Learning-Project-Continuous-Control
     ```
 
 ### Create (and activate) a new environment:
@@ -119,9 +119,10 @@ These instructions will get you a copy of the project up and running on your loc
     $ pip install -r requirements.txt
     ```
 
-- Install torch via conda
+- Install torch via conda. Please use the right [conda command](https://pytorch.org/) based on your platform
     ```
     $ conda install pytorch=0.4.0 -c pytorch
+    $ conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
     ```
 
 - Clone the repository (if you haven't already!), and navigate to the python/ folder. Then, install several dependencies.
@@ -135,7 +136,6 @@ These instructions will get you a copy of the project up and running on your loc
 
 - Create an IPython kernel for the **drlnd** environment.
     ```
-    $ pip install ipykernel
     $ python -m ipykernel install --user --name drlnd --display-name "drlnd"
     ```
 
@@ -151,8 +151,8 @@ These instructions will get you a copy of the project up and running on your loc
     - Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher_Windows_x86_64.zip)
 - Then, place the file in the ...notebooks/ folder of this repository, and unzip (or decompress) the file.
 
-- Unzip this file and place it in ```/Unitiy-Banana-DQN-Project````
-- Replace **<file_name>** in the following line of ```Navigation_Training.ipynb``` and ```Navigation_Trained_Agent.ipynb```
+- Unzip this file and place it in the ```/notebooks_python```` folder of this repo
+- Replace **<file_name>** in the following line of ```Continuous_Control.ipynb```.
     ```
     env = UnityEnvironment(file_name="<file_name>"
     ```
@@ -160,18 +160,18 @@ These instructions will get you a copy of the project up and running on your loc
     Save the notebooks.
 
 ### To Start Agent Training
-- Navigate via CLI to ```Navigation_Training.ipynb```
+- Navigate via CLI to ```Continuous_Control.ipynb```
 - Type in terminal
     ```
-    jupyter notebook Navigation_Training.ipynb
+    $ jupyter notebook Continuous_Control.ipynb
     ```
 - Run each cell in the notebook to train the agent.
 
 ### To Watch a Smart Agent
-- Navigate via CLI to ```Navigation_Trained_Agent.ipynb```
+- Navigate via CLI to ```Continuous_Control_TRAINED.ipynb```
 - Type in terminal
     ```
-    jupyter notebook Navigation_Trained_Agent.ipynb
+    $ jupyter notebook Continuous_Control_TRAINED.ipynb
     ```
 - Run each cell in the notebook to watch a trained and smart agent.
 
@@ -191,7 +191,7 @@ Docstrings, DRY, PEP8
 
 Further Deep Reinforcement Learning References
 * [Very good summary of DQN](https://medium.com/@nisheed/udacity-deep-reinforcement-learning-project-1-navigation-d16b43793af5)
-* [An Introduction to Deep Reinforcement Learning](https://thomassimonini.medium.com/an-introduction-to-deep-reinforcement-learning-17a565999c0c) 
+* [An Introduction to Deep Reinforcement Learning](https://thomassimonini.medium.com/an-introduction-to-deep-reinforcement-learning-17a565999c0c)
 * Helpful medium blog post on policies [Off-policy vs On-Policy vs Offline Reinforcement Learning Demystified!](https://kowshikchilamkurthy.medium.com/off-policy-vs-on-policy-vs-offline-reinforcement-learning-demystified-f7f87e275b48)
 * [Understanding Baseline Techniques for REINFORCE](https://medium.com/@fork.tree.ai/understanding-baseline-techniques-for-reinforce-53a1e2279b57)
 * [Cheatsheet](https://raw.githubusercontent.com/udacity/deep-reinforcement-learning/master/cheatsheet/cheatsheet.pdf)
@@ -211,7 +211,7 @@ Optimize DQNs:
     - [Dueling DQN](https://arxiv.org/abs/1511.06581): Currently, in order to determine which states are (or are not) valuable, we have to estimate the corresponding action values for each action. However, by replacing the traditional Deep Q-Network (DQN) architecture with a dueling architecture, we can assess the value of each state, without having to learn the effect of each action. The core idea of dueling networks is to use two streams, one that estimates the state value function and one that estimates the advantage for each action.
 
     - [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/abs/1710.02298): A Rainbow DQN algorithm combines the upper three modificartions (Double Q-Learning, Prioritized Experience Replay, Dueling DQN) together with:
-        - Learning from [multi-step bootstrap targets](https://arxiv.org/abs/1602.01783) 
+        - Learning from [multi-step bootstrap targets](https://arxiv.org/abs/1602.01783)
         - [Distributional DQN](https://arxiv.org/abs/1707.06887)
         - [Noisy DQN](https://arxiv.org/abs/1706.10295)
 
