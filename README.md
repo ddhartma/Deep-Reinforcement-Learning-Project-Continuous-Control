@@ -155,20 +155,18 @@ These instructions will get you a copy of the project up and running on your loc
     $ conda list
     ```
 ### Download the Unity environment
-- Only if do not use Windows: The Unity environment in this repo is prepared for Windows. In case you do not use Windows download the Unity Environment. You need only select the environment that matches your operating system (Version 1: One Agent)
-    - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher_Linux.zip)
-    - Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher.app.zip)
+- Select the environment that matches your operating system and download it (Version 2: 20 Agent):
+    - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/Reacher_Linux.zip)
+    - Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/Reacher.app.zip)
     - Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/Reacher_Windows_x86.zip)
-    - Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/one_agent/Reacher_Windows_x86_64.zip)
-- Then, place the file in the ...notebooks/ folder of this repository, and unzip (or decompress) the file.
-
-- Unzip this file and place it in the ```/notebooks_python```` folder of this repo
-- Replace **<file_name>** in the following line of ```Continuous_Control.ipynb```.
+    - Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P2/Reacher/Reacher_Windows_x86_64.zip)
+- Then, place this zipped file into the ...notebooks_python/ folder of this repository, and unzip (or decompress) the file.
+- Replace the placeholder **<file_name>** in ```Continuous_Control.ipynb```.
     ```
     env = UnityEnvironment(file_name="<file_name>"
     ```
-    with the filepath of the executable Unity evironment file(**path/to/Reacher.exe** or **path/to/Reacher.app** for example).
-    Save the notebooks.
+    with the filepath of the executable Unity evironment file (**path/to/Reacher.exe** or **path/to/Reacher.app** for example).
+- Save the notebook.
 
 ### To Start Agent Training
 - Navigate via CLI to ```Continuous_Control.ipynb```
@@ -179,12 +177,12 @@ These instructions will get you a copy of the project up and running on your loc
 - Run each cell in the notebook to train the agent.
 
 ### To Watch a Smart Agent
-- Navigate via CLI to ```Continuous_Control_TRAINED.ipynb```
+- Navigate via CLI to ```Continuous_Control_Trained_Agent.ipynb```
 - Type in terminal
     ```
-    $ jupyter notebook Continuous_Control_TRAINED.ipynb
+    $ jupyter notebook Continuous_Control_Trained_Agent.ipynb
     ```
-- Run each cell in the notebook to watch a trained and smart agent.
+- Run each cell in the notebook to watch 20 trained and smart agents.
 
 ## Acknowledgments <a name="Acknowledgments"></a>
 * This project is part of the Udacity Nanodegree program 'Deep Reinforcement Learning'. Please check this [link](https://www.udacity.com) for more information.
