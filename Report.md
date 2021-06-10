@@ -1,4 +1,5 @@
-[image1]: assets/scoring_result.png "image1"
+[image1]: assets/trained_agent.gif
+[image2]: assets/2.png
 
 # Deep Reinforcement Learning Project - Continuous Control - Implementation Report
 
@@ -55,7 +56,7 @@
     print()
     print('The state for the first agent looks like: \n', states[0])
     ```
-    - **Number of agents (states.shape[0]):** 1
+    - **Number of agents (states.shape[0]):** 20
     - **Size of each action (action_size):** 4
     - **Agent observes a state with length (states.shape[1]):** 33
     - **The state for the first agent looks like (states[0]):**
@@ -136,12 +137,15 @@
     0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
     0.00000000e+00  0.00000000e+00 -5.14229965e+00 -1.00000000e+00
     6.12835693e+00  0.00000000e+00  1.00000000e+00  0.00000000e+00
-    3.78988951e-01]]
-    states shape (1, 33)
+    3.78988951e-01]
+    ...
+        x 20 agents
+    ]
+    states shape (20, 33)
     type <class 'numpy.ndarray'>
 
-    actions  [[-1.         -1.         -0.61081709 -0.06546604]]
-    actions shape (1, 4)
+    actions  [[-1.         -1.         -0.61081709 -0.06546604] x 20 agents]
+    actions shape (20, 4)
     type <class 'numpy.ndarray'>
 
     env_info
@@ -156,50 +160,53 @@
     0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00
     0.00000000e+00  0.00000000e+00 -5.14229965e+00 -1.00000000e+00
     6.12835693e+00  0.00000000e+00  1.00000000e+00  0.00000000e+00
-    3.78988951e-01]]
-    next_states shape (1, 33)
+    3.78988951e-01]
+    ...
+        x 20 agents
+    ]
+    next_states shape (20, 33)
     type <class 'numpy.ndarray'>
 
     rewards
-    [0.0]
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     type <class 'list'>
 
     dones
-    [True]
+    [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
     type <class 'list'>
 
     scores
-    [0.13]
-    scores shape (1,)
+    [0.         0.         0.13       0.48999999 0.         0.
+     0.         0.44999999 0.         0.         0.         0.63999999
+     0.         0.         0.         0.24999999 0.         0.
+     0.         0.        ]
+    scores shape (20,)
     type <class 'numpy.ndarray'>
-    Total score (averaged over agents) this episode: 0.12999999709427357
+    Total score (averaged over agents) this episode: 0.09799999780952931
     ```
     ### Instantiate the Agent
     ```
-    agent = Agent(state_size=state_size, action_size=action_size, random_seed=2)
+    agent = Agent(state_size=state_size, action_size=action_size, num_agents=num_agents, random_seed=42)
 
     RESULTS:
     ------------
-
     Training on  cpu
 
-    self.state_size 33
-
-    self.action_size 4
-
-    --
+    ------- ACTOR ------
     self.actor_local Actor(
-    (fc1): Linear(in_features=33, out_features=400, bias=True)
-    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (fc2): Linear(in_features=400, out_features=300, bias=True)
-    (fc3): Linear(in_features=300, out_features=4, bias=True)
+    (fc1): Linear(in_features=33, out_features=256, bias=True)
+    (bn1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=256, out_features=128, bias=True)
+    (bn2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc3): Linear(in_features=128, out_features=4, bias=True)
     )
 
     self.actor_target Actor(
-    (fc1): Linear(in_features=33, out_features=400, bias=True)
-    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (fc2): Linear(in_features=400, out_features=300, bias=True)
-    (fc3): Linear(in_features=300, out_features=4, bias=True)
+    (fc1): Linear(in_features=33, out_features=256, bias=True)
+    (bn1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=256, out_features=128, bias=True)
+    (bn2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc3): Linear(in_features=128, out_features=4, bias=True)
     )
 
     self.actor_optimizer Adam (
@@ -211,18 +218,19 @@
         weight_decay: 0
     )
 
+    ------- CRITIC ------
     self.critic_local Critic(
-    (fcs1): Linear(in_features=33, out_features=400, bias=True)
-    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (fc2): Linear(in_features=404, out_features=300, bias=True)
-    (fc3): Linear(in_features=300, out_features=1, bias=True)
+    (fcs1): Linear(in_features=33, out_features=256, bias=True)
+    (bn1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=260, out_features=128, bias=True)
+    (fc3): Linear(in_features=128, out_features=1, bias=True)
     )
 
     self.critic_target Critic(
-    (fcs1): Linear(in_features=33, out_features=400, bias=True)
-    (batch_norm): BatchNorm1d(400, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
-    (fc2): Linear(in_features=404, out_features=300, bias=True)
-    (fc3): Linear(in_features=300, out_features=1, bias=True)
+    (fcs1): Linear(in_features=33, out_features=256, bias=True)
+    (bn1): BatchNorm1d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (fc2): Linear(in_features=260, out_features=128, bias=True)
+    (fc3): Linear(in_features=128, out_features=1, bias=True)
     )
 
     self.critic_optimizer Adam (
@@ -230,16 +238,13 @@
         amsgrad: False
         betas: (0.9, 0.999)
         eps: 1e-08
-        lr: 0.001
+        lr: 0.0001
         weight_decay: 0
     )
-
-    self.noise <ddpg_agent.OUNoise object at 0x0000023490656780>
-
-    self.epsilon 1.0
     ```
    
     ### Train an Agent
+    - the code basis for **ddpg() function** has been taken from the file **DDPG.ipynb** in the Udacity repo [ddpg-pendulum](https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-pendulum)
     - function which implements the agent training
     - 2 for loops: outer loop --> loop over episodes and inner loop --> loop over timesteps per episode (TD learning algorithm)
         - for the actual episode:
@@ -258,67 +263,105 @@
             - save torch models for actor and critic if average score >=30
         - return scores    
     ```
-    def ddpg(n_episodes=100, max_t=1000, print_every=10):
+    def ddpg(n_episodes=1000, max_t=1000):
         """ Deep Deterministic Policy Gradient
         
             INPUTS: 
             ------------
                 n_episodes - (int) maximum number of training episodes
                 max_t - (int) maximum number of timesteps per episode
-                print_every (int) number episodes for printing average score 
                 
             OUTPUTS:
             ------------
                 scores - (list) list of score values for each episode
-        """
-
-        scores_deque = deque(maxlen=100)
-        scores = []
-        for i_episode in range(1, n_episodes+1):
-            env_info = env.reset(train_mode=True)[brain_name]          
-            states = env_info.vector_observations               
-            agent.reset()
-            score = np.zeros(num_agents)
-            for t in range(max_t): 
+        """ 
+        best_score = -np.inf                                       # initialize best score as minus infinite 
+        mean_scores = []                                           # list containing scores from each episode
+        mean_score_window = deque(maxlen=10)                       # last 10 scores
+        mean_scores_window_avg = []                                # list container to store the rolling avg of mean_score_window
+        consec_episodes = 0                                        # counter for consecutive episodes with mean_scores_window_avg > 30
+        for i_episode in range(1, n_episodes+1):                   # start for loop over episodes
+            env_info = env.reset(train_mode=True)[brain_name]      # get/reset enviroment      
+            states = env_info.vector_observations                  # get states values for all 20 agents from environment
+            agent.reset()                                          # reset the agents' noise
+            score = np.zeros(num_agents)                           # initialize episode score for all 20 agents
+            start_time = time.time()                               # start episode timer
+            for t in range(max_t):                                 # start for loop over episode's time steps
                 actions = agent.act(states)                        # return actions for current states and policy
                 env_info = env.step(actions)[brain_name]           # send all actions to the environment
                 next_states = env_info.vector_observations         # get next state (for each agent)
                 rewards = env_info.rewards                         # get reward (for each agent)
                 dones = env_info.local_done                        # see if episode finished
                 
-                #for state, action, reward, next_state, done in zip(states, actions, rewards, next_states, dones):
-                agent.step(states[0], actions[0], rewards[0], next_states[0], dones[0])
+                # save experience to replay buffer,
+                for state, action, reward, next_state, done in zip(states, actions, rewards, next_states, dones):
+                    agent.step(state, action, reward, next_state, done, t)  
+
+                states = next_states                                      # save next_sates as actual states
+                score += rewards                                          # add up rewards of all 20 agents for this time step to episode score 
                 
-                states = next_states
-                score += rewards
-                if np.any(dones):                                  # exit loop if episode finished
+                if np.any(dones):                                         # exit loop if episode finished
                     break
             
-            scores_deque.append(score)
-            scores.append(score)
+            duration = time.time() - start_time                           # calculate elapsed time for actual episode
+            mean_scores.append(np.mean(score))                            # save most recent score
+            mean_score_window.append(mean_scores[-1])                     # add to consecutive scores
+            mean_scores_window_avg.append(np.mean(mean_score_window))     # save the most recent consecutive score
+
+            # if actual mean_score averaged over 20 agents and over 10 consecutive episodes is LOWER than 30 ... 
+            # print scores, set consec_epsiodes to 0 if needed
+            if mean_scores_window_avg[-1] < 30:
+                print('\rEpisode {}\tDur: {:.1f} \tAverage Eps Score: {:.2f} \tMean Consec Score: {:.2f}'.format(i_episode, round(duration), mean_scores[-1], mean_scores_window_avg[-1]))
+                if consec_episodes != 0:
+                    consec_episodes = 0
             
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_deque)), end="")
-            if i_episode % print_every == 0:
-                print('\rEpisode {} Mean Score: {:.2f} Average Score: {:.2f}'.format(i_episode, np.mean(score), np.mean(scores_deque)))
-            if np.mean(scores_deque) >= 30:
-                print('\nEnvironment solved in {:d} episodes!\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_deque)))
-                torch.save(agent.actor_local.state_dict(), 'checkpoint_actor.pth')
-                torch.save(agent.critic_local.state_dict(), 'checkpoint_critic.pth')
-                break
+            # if actual mean_score averaged over 20 agents and over 10 consecutive episodes is HIGHER than 30 ... 
+            # print scores, increase consec_epsiodes, update pytorch model state_dicts and save them
+            # if consec_episodes == 100 --> task is successfully completed.
+            if mean_scores_window_avg[-1] >= 30:
+                consec_episodes += 1
+                print('\rEpisode {}\tDur: {:.1f} \tAverage Eps Score: {:.2f} \tMean Consec Score: {:.2f} \tConsec Eps: {:.2f}'.format(i_episode, round(duration), mean_scores[-1], mean_scores_window_avg[-1], int(consec_episodes)))
+
                 
-        return scores
+                if mean_scores_window_avg[-1] > best_score:
+                    torch.save(agent.actor_local.state_dict(), 'checkpoint_actor.pth')
+                    torch.save(agent.critic_local.state_dict(), 'checkpoint_critic.pth')
+                    best_score = mean_scores_window_avg[-1]
+                
+                if consec_episodes == 100:
+                    print('\nEnvironment SOLVED : \tMoving Average ={:.1f} over last {} episodes'.format(mean_scores_window_avg[-1], consec_episodes))            
+                    break
+        
+        return mean_scores, mean_scores_window_avg
+
+
+    mean_scores, mean_scores_window_avg = ddpg()
     ```
     ### Plot the cumulated scores as a function of episodes
     ```
-    # plot the scores
-    fig = plt.figure()
+    # Plot mean_scores and mean_scores_window_avg (moving average)
+    target = [30] * len(mean_scores) # Trace a line indicating the target value
+    fig = plt.figure(figsize=(18,8))
+    fig.suptitle('Plot of the rewards', fontsize='xx-large')
+
     ax = fig.add_subplot(111)
-    plt.plot(np.arange(len(scores)), scores)
-    plt.ylabel('Score')
-    plt.xlabel('Episode #')
+    ax.plot(mean_scores, label='Score', color='Blue')
+    ax.plot(mean_scores_window_avg, label='Moving Average',
+            color='LightGreen', linewidth=3)
+    ax.plot(target, linestyle='--', color='LightCoral', linewidth=1 )
+    ax.text(0, 30, 'Target', color='LightCoral', fontsize='large')
+    ax.set_ylabel('Score')
+    ax.set_xlabel('Episode #')
+    ax.legend(fontsize='xx-large', loc='lower right')
+
     plt.show()
     ```
-    ![image1]
+    ![image2]
+
+    - **Score** has been averaged over all 20 agents.
+    - **Moving Average** is the rolling average with a roll length of 10, i.e. the **Moving Average** is calculated from 10 consecutive **Score** values.   
+    - After **21 episodes** the moving average was always **greater than 30**. Therefore the task (average score over all 20 agents AND higher than 30 for at least 100 episodes) has been **successfully completed at episode 121**.
+
     ### Close the environment
     ```
     env.close()
@@ -326,6 +369,7 @@
 
 ## Implementation - ddpg_agent.py <a name="impl_agent"></a>
 - Open Python file ```notebooks_python/ddpg_agent.py```
+- The code basis for **ddpg_agent.py** has been taken from the file **ddpg_agent.py** in the Udacity repo [ddpg-pendulum](https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-pendulum)
     ### Load important libraries
     ```
     import numpy as np
@@ -346,13 +390,22 @@
     GAMMA = 0.99            # discount factor
     TAU = 1e-3              # for soft update of target parameters
     LR_ACTOR = 1e-4         # learning rate of the actor
-    LR_CRITIC = 1e-3        # learning rate of the critic
+    LR_CRITIC = 1e-4        # learning rate of the critic
     WEIGHT_DECAY = 0        # L2 weight decay
-    EPSILON = 1.0           # Epsilon value
-    EPSILON_DECAY = 0.999999 # Epsilon Decay
+    NOISE_DECAY = 0.999     # NOISE Decay (not needed)
+    UPDATE_EVERY = 20       # Update experience tuple every <UPDATE_EVERY> time steps
+    NUM_UPDATES = 10        # Number of updates --> call of learn function every <NUM_UPDATES>
+    NOISE_SIGMA = 0.05      # Diffusion parameter for Ornstein-Uhlenbeck noise, weight parameter for adding random
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     ```
+    - A **BUFFER_SIZE** in the range 1e6 to 1e5 seems to be efficient in order to sample experiences from the replay buffer.  
+    - Different ***BATCH_SIZE** values for minibatches were tested. 128 seems to be a good compromise with regard to training speed (the higher the BATCH_SIZE the slower the training progress) and training performance.
+    - The discount factor **GAMMA** has been set to 0.99 as a standard value. Other values could be checked in future approaches. The larger the discount rate is, the more the agent cares about the distant future.
+    - In order to ensure a **soft update** of the target networks by th local (regular) networks the **TAU** parameter has been limited to low values. Higher values would lead to more aggressive target updates, i.e. the local network weights would have more updating power on the target network weights.
+    - Different learning rates were tested during training, both for the actor and critic networks. Higher learning rates could on the one hand increase training speed but on the other lead to update oscillations. Reasonable learning rates were found in the range between 1e-4 to 1e-3. However, the best results were found for **LR_ACTOR** = **LR_CRITIC** = 1e-4 voth for actor and critic.    
+    - **UPDATE_EVERY** and **NUM_UPDATES**: It has been found out, that instead of updating the actor and critic networks 20 times at every timestep, a network update **10 times after every 20 timesteps** increased stability and accelareted convergence.
+    - Lower values than 0.2 for **NOISE_SIGMA** (Diffusion parameter for Ornstein-Uhlenbeck noise, weight parameter for adding random to the kinetics) seem to be benficial with regard to stability and fast convergence.
     
     ### Main class 'Agent' to train an agent getting smart
     - **init** function:
@@ -373,25 +426,26 @@
         - structure of **experiences** (tuple of torch tensors):
             ```
             (
-                tensor([[33x floats for state], x self.batch_size for minibatch]),
-                tensor([[4x int for action], x self.batch_size for minibatch]),
-                tensor([[1x float for reward], x self.batch_size for minibatch]),
-                tensor([[33x floats for next_state], x self.batch_size for minibatch]),
-                tensor([[1x int for done], x self.batch_size for minibatch])
+                tensor([[33x floats for state], x self.batch_size]),
+                tensor([[4x int for action], x self.batch_size]),
+                tensor([[1x float for reward], x self.batch_size]),
+                tensor([[33x floats for next_state], x self.batch_size]),
+                tensor([[1x int for done], x self.batch_size])
             )
             ```
-        (- learn every UPDATE_EVERY time steps (by doing random sampling from Replaybuffer))
-        - if ReplayBuffer is larger than self.batch_size sample from Replaybuffer 
+        - if ReplayBuffer is larger than BATCH_SIZE actual time_step == UPDATE_EVERY, then sample from Replaybuffer 
+        - repeat the learn/update process NUM_UPDATES times
+        
     
     - **act** function:
         - returns a **clipped_action** for given state and current policy
-        - **actor_local** is used to find the best action
         - convert **state** from numpy array to torch tensor
+        - use agent **state** as input for **actor_local**
+        - **actor_local** is used to find the best action
         - set **actor_local model** to evaluation mode (no optimizer step, no backpropagation)
         - get action values as Fixed Targets
         - set **actor_local model** back to train mode
-        - optional: add Ornstein-Uhlenbeck noise 
-        - initiate an epsilon greedy action selection
+        - optional: add Ornstein-Uhlenbeck noise to action
         - limit action to a **clipped_action**
         
     - **learn** function:
@@ -413,21 +467,21 @@
                     Q_targets_next = self.critic_target(next_states, actions_next)
 
                     RESULT structure for Q_targets_next:
-                    tensor([[1x float], x self.batch_size for minibatch])
+                    tensor([[1x float], x self.batch_size])
                     ```
                 - compute **Q_targets** for current states 
                     ```
                     Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
                     RESULT structure for Q_targets:
-                    tensor([[1x float], x self.batch_size for minibatch])
+                    tensor([[1x float], x self.batch_size])
                     ```
                 - get expected Q values **Q_expected** from **critic local model**
                     ```
                     Q_expected = self.critic_local(states, actions)
 
                     RESULT structure for Q_expected:
-                    tensor([[1x float], x self.batch_size for minibatch])
+                    tensor([[1x float], x self.batch_size])
                     ```
                 - compute loss **critic_loss**
                     ```
@@ -483,9 +537,10 @@
         - Soft Update strategy consists of **slowly blending local (regular) network weights with target network weights** 
     ```
     class Agent():
-        """Interacts with and learns from the environment."""
+        """ Interacts with and learns from the environment
+        """
 
-        def __init__(self, state_size, action_size, random_seed):
+        def __init__(self, state_size, action_size, num_agents, random_seed, checkpoint_actor=None, checkpoint_critic=None):
             """Initialize an Agent object.
 
                 INPUTS:
@@ -493,6 +548,8 @@
                     state_size - (int) dimension of each state
                     action_size - (int) dimension of each action
                     random_seed - (int) random seed
+                    checkpoint_actor -  (string) path to actor model parameters
+                    checkpoint_critic - (string) path to critic model parameters
 
                 OUTPUTS:
                 ------------
@@ -503,6 +560,7 @@
 
             self.state_size = state_size
             self.action_size = action_size
+            self.num_agents = num_agents
             self.seed = random.seed(random_seed)
 
             # Actor Network (w/ Target Network)
@@ -515,13 +573,23 @@
             self.critic_target = Critic(state_size, action_size, random_seed).to(device)
             self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
 
+            # Load model parameters
+            if checkpoint_actor != None:
+                self.actor_local.load_state_dict(torch.load(checkpoint_actor))
+                self.actor_target.load_state_dict(torch.load(checkpoint_actor))
+            if checkpoint_critic != None:
+                self.critic_local.load_state_dict(torch.load(checkpoint_critic))
+                self.critic_target.load_state_dict(torch.load(checkpoint_critic))
+
             # Noise process
             self.noise = OUNoise(action_size, random_seed)
 
-            self.epsilon = EPSILON
+            self.noise_decay = NOISE_DECAY
 
             # Replay memory
             self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
+
+            self.t_step = 0
 
             print('------- ACTOR ------')
             print('self.actor_local',self.actor_local)
@@ -538,7 +606,8 @@
             print('self.critic_optimizer',self.critic_optimizer)
             print()
 
-        def step(self, state, action, reward, next_state, done):
+
+        def step(self, state, action, reward, next_state, done, timestep):
             """ Save experience in replay memory, and use random sample from buffer to learn.
 
                 INPUTS:
@@ -548,20 +617,26 @@
                     reward - (float) actual reward
                     next_state - (numpy array) with shape (33,) next state vector for the actual agent
                     done - (bool) if True epsiode is finished for the agent
+                    timestep ()
 
                 OUTPUTS:
                 ------------
                     No direct
             """
 
+
             # Save experience / reward
             self.memory.add(state, action, reward, next_state, done)
+            
 
             # Learn, if enough samples are available in memory
-            if len(self.memory) > BATCH_SIZE:
-                experiences = self.memory.sample()
-                self.learn(experiences, GAMMA)
-
+            # Learn every <UPDATE_EVERY> time steps.
+            # Repeat learning process <NUM_UPDATES> times
+            if len(self.memory) > BATCH_SIZE and timestep % UPDATE_EVERY == 0:
+                for _ in range(NUM_UPDATES):
+                    experiences = self.memory.sample()
+                    self.learn(experiences, GAMMA)
+          
         def act(self, state, add_noise=True):
             """ Returns actions for given state as per current policy.
 
@@ -581,12 +656,19 @@
                 action = self.actor_local(state).cpu().data.numpy()
             self.actor_local.train()
             if add_noise:
-                action += self.noise.sample()
-                action *=  self.epsilon
+                action += self.noise.sample() #* self.noise_decay
+                #action *=  self.epsilon
+                self.noise_decay *= self.noise_decay
             else:
-                action *=  self.epsilon
+                clipped_action =  action
 
             clipped_action = np.clip(action, -1, 1)
+
+            #print('clipped_action')
+            #print(clipped_action)
+            #print('state shape', clipped_action.shape)
+            #print('type', type(clipped_action))
+            #print()
 
             return clipped_action
 
@@ -609,7 +691,7 @@
                 ------------
                     No direct
             """
-           
+    
             states, actions, rewards, next_states, dones = experiences
 
             # ---------------------------- update critic ---------------------------- #
@@ -625,6 +707,7 @@
             # Minimize the loss
             self.critic_optimizer.zero_grad()
             critic_loss.backward()
+            torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
             self.critic_optimizer.step()
 
             # ---------------------------- update actor ---------------------------- #
@@ -641,8 +724,7 @@
             self.soft_update(self.critic_local, self.critic_target, TAU)
             self.soft_update(self.actor_local, self.actor_target, TAU)
 
-            # ----------------------- update epsilon / noise ----------------------- #
-            self.epsilon *= EPSILON_DECAY
+            # ---------------------------- update noise ---------------------------- #
             self.reset()
 
         def soft_update(self, local_model, target_model, tau):
@@ -668,38 +750,34 @@
     - **init** function: initialize a ReplayBuffer object
     - **add** function: add an experience tuple to self.memory object
     - **sample** function: 
-        - create a random **experiences** sample (of type list) from **self.memory** ReplayBuffer instance with size **self.batch_size**
-        - structure of experience sample: list of named tuples **Experience** with length **self.batch_size**
+        - create a random **experiences** sample (of type list) from **self.memory** ReplayBuffer instance with size **BATCH_SIZE**
+        - size of ReplayBuffer (self.memory): BUFFER_SIZE
+        - structure of experience sample: list of named tuples **Experience** with length **BATCH_SIZE**
             ```
             [
-                **Experience**(
+                Experience(
                             **state**=array([33 xfloat values]),
                             **action**=array([4 x float values]),
                             **reward**=1 x float,
-                            **next_state=array([33 x floatvalues])
+                            **next_state=array([33 x float values])
                             ),
-                **Experience**(
-                            **state**=array([33 xfloat values]),
-                            **action**=array([4 x float values]),
-                            **reward**=1 x float,
-                            **next_state=array([33 x floatvalues])
-                            ),
-                ... 
+               
+                ... x BATCH_SIZE
             ]              
             ```
         - return **states**, **actions**, **rewards**, **next_states** and **dones** each as torch tensors
         - structure of 
-            - **states**: torch tensor with shape (128,33)
-            - **actions**: torch tensor with shape (128,4)
-            - **rewards**: torch tensor with shape (128,1)
-            - **next_states**: torch tensor with shape (128,33)
-            - **dones**: torch tensor with shape (128,1)
+            - **states**: torch tensor with shape (BATCH_SIZE,33)
+            - **actions**: torch tensor with shape (BATCH_SIZE,4)
+            - **rewards**: torch tensor with shape (BATCH_SIZE,1)
+            - **next_states**: torch tensor with shape (BATCH_SIZE,33)
+            - **dones**: torch tensor with shape (BATCH_SIZE,1)
             ```
-            states: tensor([[ <float value,> x 33 ], x 128 ]) 
-            actions: tensor([[ <float value,> x 4 ], x 128 ]) 
-            rewards: tensor([[ <float value> ], x 128 ]) 
-            next_states: tensor([[ <float value,> x 33 ], x 128 ]) 
-            dones: tensor([[ <bool value> ], x 128 ]) 
+            states: tensor([[ <float value,> x 33 ], x BATCH_SIZE ]) 
+            actions: tensor([[ <float value,> x 4 ], x BATCH_SIZE ]) 
+            rewards: tensor([[ <float value> ], x BATCH_SIZE ]) 
+            next_states: tensor([[ <float value,> x 33 ], x BATCH_SIZE ]) 
+            dones: tensor([[ <bool value> ], x BATCH_SIZE ]) 
             ```
     - **__len__** function: return the current size of internal memory
     ```
@@ -731,12 +809,6 @@
 
                 INPUTS:
                 ------------
-                    state - ()
-                    action - ()
-                    reward - ()
-                    next_state - ()
-                    done - ()
-
                     state - (numpy array) with shape (33,) state vector for the actual agent
                     action - (numpy array) with shape (4,) actual action values for the agent
                     reward - (float) actual reward
@@ -794,9 +866,9 @@
     ```
 
 
-
 ## Implementation - model.py <a name="impl_model"></a>
 - Open Python file ```model.py```
+- The code basis for **model.py** has been taken from the file **model.py** in the Udacity repo [ddpg-pendulum](https://github.com/udacity/deep-reinforcement-learning/tree/master/ddpg-pendulum)
     ### Import important libraries
     ```
     import numpy as np
@@ -804,23 +876,23 @@
     import torch.nn as nn
     import torch.nn.functional as F
     ```
-    ### Create a Pytorch Actor Policy model as a deep QNetwork
+    ### Create a Pytorch Actor Policy model via a deep neural network 
     - **init** function: Initialize parameters and build model
     - **reset_parameters** function: Reset the parameters of the network (random uniform distribution)
     - **forward** function: 
         - create a forward pass, i.e. build a network that maps **state -> action values**
-        - use Batchnormalization to enhance covergence (faster learning)
-        - use tanh as an output activation function to clip action values between -1 and 1
+        - use tanh as an output activation function to limit action values between -1 and 1
     - **Architecture**:
         - Three fully connected layers
-            - 1st hidden layer: fully connected, 33 input units, fc1_units output units, rectified via ReLU
-            - 2nd hidden layer: fully connected, fc1_units input units, fc2_units output units, rectified via ReLU
-            - 3rd hidden layer: fully connected, fc2_units input units, 4 output units
+            - 1st hidden layer: fully connected, 33 input units, 256 output units, rectified via ReLU
+            - 2nd hidden layer: fully connected, 256 input units, 128 output units, rectified via ReLU
+            - 3rd hidden layer: fully connected, 128 input units, 4 output units, limited to the interval [-1,1] via tanh
     ```
     class Actor(nn.Module):
-        """ Actor (Policy) Model."""
+        """ Actor (Policy) Model
+        """
 
-        def __init__(self, state_size, action_size, seed, fc1_units=400, fc2_units=300):
+        def __init__(self, state_size, action_size, seed, fc1_units=256, fc2_units=128):
             """ Initialize parameters and build model
 
                 INPUTS:
@@ -838,8 +910,9 @@
             super(Actor, self).__init__()
             self.seed = torch.manual_seed(seed)
             self.fc1 = nn.Linear(state_size, fc1_units)
-            self.batch_norm = nn.BatchNorm1d(fc1_units)       # Use batch normalization
+            #self.bn1 = nn.BatchNorm1d(fc1_units)
             self.fc2 = nn.Linear(fc1_units, fc2_units)
+            #self.bn2 = nn.BatchNorm1d(fc2_units)
             self.fc3 = nn.Linear(fc2_units, action_size)
             self.reset_parameters()
 
@@ -854,6 +927,7 @@
                 ------------
                     No direct
             """
+
             self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
             self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
             self.fc3.weight.data.uniform_(-3e-3, 3e-3)
@@ -863,15 +937,16 @@
 
                 INPUTS:
                 ------------
-                    state - (torch tensor) --> tensor([[33x floats for states], x size of minibatch])
+                    state - (torch tensor) --> tensor([[33x floats], x size of minibatch])
 
                 OUTPUTS:
                 ------------
                     actions - (torch tensor) --> tensor([[4x floats], x size of minibatch])
             """
-            x = F.relu(self.batch_norm(self.fc1(state)))
+
+            x = F.relu(self.fc1(state))
             x = F.relu(self.fc2(x))
-            actions = F.tanh(self.fc3(x))
+            actions = torch.tanh(self.fc3(x))
             return actions
     ```
     ### Create a Pytorch Critic (Value) model as a deep QNetwork
@@ -879,19 +954,20 @@
     - **reset_parameters** function: Reset the parameters of the network (random uniform distribution)
     - **forward** function: 
         - create a forward pass, i.e. build a network that maps **state -> Q-values**
-        - use Batchnormalization to enhance covergence (faster learning)
+        - use BatchNormalization (BatchNorm1d) to enhance covergence (faster learning) after the first linear layer
         - concat states with action values to create state-action pairs 
     - **Architecture**:
         - Three fully connected layers
-            - 1st hidden layer: fully connected, 33 input units, fcs1_units output units, rectified via ReLU
-            - 2nd hidden layer: fully connected, fcs1_units input units, fc2_units output units, rectified via ReLU
-            - 3rd hidden layer: fully connected, fc2_units input units, 1 output unit
+            - 1st hidden layer: fully connected, 33 input units, 256 output units, batchnormalized, rectified via ReLU
+            - Concat states with actions
+            - 2nd hidden layer: fully connected, 256 + 4 input units, 128 output units, rectified via ReLU
+            - 3rd hidden layer: fully connected, 128 input units, 1 output unit
     ```
     class Critic(nn.Module):
         """ Critic (Value) Model
         """
 
-        def __init__(self, state_size, action_size, seed, fcs1_units=400, fc2_units=300):
+        def __init__(self, state_size, action_size, seed, fcs1_units=256, fc2_units=128):
             """ Initialize parameters and build model
 
                 INPUTS:
@@ -906,13 +982,16 @@
                 ------------
                     No direct
             """
+
             super(Critic, self).__init__()
             self.seed = torch.manual_seed(seed)
+
             self.fcs1 = nn.Linear(state_size, fcs1_units)
-            self.batch_norm = nn.BatchNorm1d(fcs1_units)
-            self.fc2 = nn.Linear(fcs1_units+action_size, fc2_units)
+            self.bn1 = nn.BatchNorm1d(fcs1_units)
+            self.fc2 = nn.Linear(fcs1_units + action_size, fc2_units)
             self.fc3 = nn.Linear(fc2_units, 1)
             self.reset_parameters()
+
 
         def reset_parameters(self):
             """ Reset the parameters of the network (random uniform distribution)
@@ -925,9 +1004,11 @@
                 ------------
                     No direct
             """
+
             self.fcs1.weight.data.uniform_(*hidden_init(self.fcs1))
             self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
             self.fc3.weight.data.uniform_(-3e-3, 3e-3)
+
 
         def forward(self, state, action):
             """ Build a critic (value) network that maps (state, action) pairs -> Q-values.
@@ -941,80 +1022,103 @@
                 ------------
                     Q_values - (torch tensor) --> tensor([[1x float], x size of minibatch])
             """
-            xs = F.relu(self.batch_norm(self.fcs1(state)))
+
+            xs = F.relu(self.bn1(self.fcs1(state)))
             x = torch.cat((xs, action), dim=1)
             x = F.relu(self.fc2(x))
             Q_values = self.fc3(x)
             return Q_values
     ```
+    ### Some remarks:
+    - It has been found that a input configuration of 256 and 128 hidden nodes for the first and second hidden layer, both for actor and critic gave the best result with regard to training performance.
+    - A low number of hidden units (in the range of 64 and lower) let to instabilities for later episodes (even with the introduction of target clipping).
+    - Batch Normalization seems to further increase training stability. 
 
-## Implementation - Navigation_Trained_Agent.ipynb <a name="impl_notebook_trained_agent"></a> 
-- Open Jupyter Notebook ```Navigation_Trained_Agent.ipynb```
+
+## Implementation - Continuous_Control_Trained_Agent.ipynb <a name="impl_notebook_trained_agent"></a> 
+- Open Jupyter Notebook ```Continuous_Control_Trained_Agent.ipynb```
     ### Import important libraries
     - modul ***unityagents*** provides the Unity Environment. This modul is part and installed via requirements.txt. Check the README.md file for detailed setup instructions.
     - modul **dqn_agent** is the own implementation of an DQN agent. Check the description of **dqn_agent.py** for further details. 
     ```
+    import gym
     import random
     import torch
     import numpy as np
+    import time
     from collections import deque
     import matplotlib.pyplot as plt
     %matplotlib inline
 
     from unityagents import UnityEnvironment
-    from dqn_agent import Agent
+    from ddpg_agent import Agent
     ```
     ### Instantiate the Environment
     ```
     # Load the Unity environment
-    env = UnityEnvironment(file_name="Banana.app")
-
+    env = UnityEnvironment(file_name='Reacher_Windows_x86_64/Reacher.exe', no_graphics=False, worker_id=1)
     # Get the default brain
     brain_name = env.brain_names[0]
     brain = env.brains[brain_name]
 
-    # Get an instance of an agent from the Agent class (see module dqn_agent)
-    agent = Agent(state_size=37, action_size=4, seed=0)
+    # reset the environment
+    env_info = env.reset(train_mode=True)[brain_name]
 
-    # Load the weights from the pytorch state_dict file checkpoint.pth
-    agent.qnetwork_local.load_state_dict(torch.load('checkpoint.pth'))
-    
-    env_info = env.reset(train_mode=False)[brain_name]  # reset the environment
-    state = env_info.vector_observations[0]             # get the current state
-    score = 0                                           # initialize the score
+    # number of agents
+    num_agents = len(env_info.agents)
+    print('Number of agents:', num_agents)
+
+    # size of each action
+    action_size = brain.vector_action_space_size
+    print('Size of each action:', action_size)
+
+    # examine the state space 
+    states = env_info.vector_observations
+    state_size = states.shape[1]
+    print('There are {} agents. Each observes a state with length: {}'.format(states.shape[0], state_size))
+    print()
+    print('The state for the first agent looks like: \n', states[0])
     ```
     ### Watch a smart agent in action
     ```
-    while True:
-        action = agent.act(state)                      # select an action
-        env_info = env.step(action)[brain_name]        # send the action to the environment
-        next_state = env_info.vector_observations[0]   # get the next state
-        reward = env_info.rewards[0]                   # get the reward
-        done = env_info.local_done[0]                  # see if episode has finished
-        score += reward                                # update the score
-        state = next_state                             # roll over the state to next time step
-        if done:                                       # exit loop if episode finished
-            break
+    # test the trained agent
+    agent = Agent(state_size=state_size, 
+                action_size=action_size, 
+                num_agents=num_agents, 
+                random_seed=42, 
+                checkpoint_actor='checkpoint_actor.pth',
+                checkpoint_critic='checkpoint_critic.pth')
+
+
+    for episode in range(4):
+        env_info = env.reset(train_mode=False)[brain_name]        
+        states = env_info.vector_observations       
+        score = np.zeros(num_agents)               
         
-    print("Score: {}".format(score))
+        while True:
+            actions = agent.act(states, add_noise=False)                    
+            
+            env_info = env.step(actions)[brain_name]        
+            next_states = env_info.vector_observations     
+            rewards = env_info.rewards       
+            dones = env_info.local_done
+            score += rewards
+            states = next_states
+
+            if np.any(dones):                              
+                break
+
+        print('Episode: \t{} \tScore: \t{:.2f}'.format(episode, np.mean(score)))
     ```
+    - Pass the best trained model weights (checkpoint_actor.pth, checkpoint_critic.pth) for actor and critic to the Agent class instance
+    - These weights will be loaded and used for testing.
+    - The gif below visualizes a trained result.
+
+        ![image1]
 
 ## Ideas for future work <a name="ideas_future"></a> 
-- Implement Deep Q-Learning Improvements like:
-    - [Double Q-Learning](https://arxiv.org/abs/1509.06461): Deep Q-Learning [tends to overestimate](https://www.ri.cmu.edu/pub_files/pub1/thrun_sebastian_1993_1/thrun_sebastian_1993_1.pdf) action values. In early stages, the Q-values are still evolving. This can result in an overestimation of Q-values, since the maximum values are chosen from noisy numbers. Solution: Select the best action using one set of weights w, but evaluate it using a different set of weights w'. It's basically like having two separate function approximators.
-
-    - [Prioritized Experience Replay](https://arxiv.org/abs/1511.05952): Deep Q-Learning samples experience transitions uniformly from a replay memory. Prioritized experienced replay is based on the idea that the agent can learn more effectively from some transitions than from others, and the more important transitions should be sampled with higher probability.
-
-    - [Dueling DQN](https://arxiv.org/abs/1511.06581): Currently, in order to determine which states are (or are not) valuable, we have to estimate the corresponding action values for each action. However, by replacing the traditional Deep Q-Network (DQN) architecture with a dueling architecture, we can assess the value of each state, without having to learn the effect of each action. The core idea of dueling networks is to use two streams, one that estimates the state value function and one that estimates the advantage for each action.
-
-    - [Rainbow: Combining Improvements in Deep Reinforcement Learning](https://arxiv.org/abs/1710.02298): A Rainbow DQN algorithm combines the upper three modificartions (Double Q-Learning, Prioritized Experience Replay, Dueling DQN) together with:
-        - Learning from [multi-step bootstrap targets](https://arxiv.org/abs/1602.01783) 
-        - [Distributional DQN](https://arxiv.org/abs/1707.06887)
-        - [Noisy DQN](https://arxiv.org/abs/1706.10295)
-
-- Further Readings for DQN optimizations:
-    - [Speeding up DQN on PyTorch: how to solve Pong in 30 minutes](https://shmuma.medium.com/speeding-up-dqn-on-pytorch-solving-pong-in-30-minutes-81a1bd2dff55)
-    - [Advanced DQNs: Playing Pac-man with Deep Reinforcement Learning by mapping pixel images to Q values](https://towardsdatascience.com/advanced-dqns-playing-pac-man-with-deep-reinforcement-learning-3ffbd99e0814)
-    - Interesting GitHub repo based on [Prioritized Experience Replay](https://github.com/rlcode/per)
-    - [Conquering OpenAI Retro Contest 2: Demystifying Rainbow Baseline](https://medium.com/intelligentunit/conquering-openai-retro-contest-2-demystifying-rainbow-baseline-9d8dd258e74b)
-  
+Several parts of the actual implementation could be improved in the future:
+- At the moment there is no asynchronous ([A3C](https://arxiv.org/pdf/1602.01783.pdf)) approach implemented, i.e. we do not use agent parallelization via multi-core CPU threading at the moment. Such approaches could speed up learning very efficiently. In addition, samples will be decorrelated because agents will likely experience different states at any given time. This means, we could remove the ReplayBuffer by using this approach.
+- Further, more sophisticated hyperparameter tuning could speed up and stabilize the learning process.
+- n-step bootstrapping instead of TD estimates for the critic network could result in faster convergence with less experience required and a reduction of the TD estimate bias.
+- The implementation of Generalized Advantage Estimation ([GAE](https://arxiv.org/pdf/1506.02438.pdf)), i.e. a mixture implementation of all n-step bootstrapping estimates at once via the calculation of the exponantially **n**-decaying (for **n**-step bootstrapping) lambda return could further speed up training because multiple value functions spread around on every time step.
