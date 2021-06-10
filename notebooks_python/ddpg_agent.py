@@ -9,22 +9,24 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-BUFFER_SIZE = int(1e5)  # replay buffer size
+BUFFER_SIZE = int(1e6)  # replay buffer size
 BATCH_SIZE = 128        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor
 LR_CRITIC = 1e-4        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
-EPSILON = 1.0           # Epsilon value
-EPSILON_DECAY = 0.999999 # Epsilon Decay
+NOISE_DECAY = 0.999    # NOISE Decay
+UPDATE_EVERY = 20       # Update experience tuple every ... time steps
+NUM_UPDATES = 10        # Number of updates --> call of learn function
+NOISE_SIGMA = 0.05
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
     """Interacts with and learns from the environment."""
 
-    def __init__(self, state_size, action_size, random_seed):
+    def __init__(self, state_size, action_size, num_agents, random_seed, checkpoint_actor=None, checkpoint_critic=None):
         """Initialize an Agent object.
 
             INPUTS:
@@ -32,6 +34,8 @@ class Agent():
                 state_size - (int) dimension of each state
                 action_size - (int) dimension of each action
                 random_seed - (int) random seed
+                checkpoint_actor -  path to actor model parameters
+                checkpoint_critic - (string) path to critic model parameters
 
             OUTPUTS:
             ------------
@@ -42,6 +46,7 @@ class Agent():
 
         self.state_size = state_size
         self.action_size = action_size
+        self.num_agents = num_agents
         self.seed = random.seed(random_seed)
 
         # Actor Network (w/ Target Network)
@@ -54,13 +59,23 @@ class Agent():
         self.critic_target = Critic(state_size, action_size, random_seed).to(device)
         self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)
 
+        # Load model parameters
+        if checkpoint_actor != None:
+            self.actor_local.load_state_dict(torch.load(checkpoint_actor))
+            self.actor_target.load_state_dict(torch.load(checkpoint_actor))
+        if checkpoint_critic != None:
+            self.critic_local.load_state_dict(torch.load(checkpoint_critic))
+            self.critic_target.load_state_dict(torch.load(checkpoint_critic))
+
         # Noise process
         self.noise = OUNoise(action_size, random_seed)
 
-        self.epsilon = EPSILON
+        self.noise_decay = NOISE_DECAY
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
+
+        self.t_step = 0
 
         print('------- ACTOR ------')
         print('self.actor_local',self.actor_local)
@@ -78,7 +93,7 @@ class Agent():
         print()
 
 
-    def step(self, state, action, reward, next_state, done):
+    def step(self, state, action, reward, next_state, done, timestep):
         """ Save experience in replay memory, and use random sample from buffer to learn.
 
             INPUTS:
@@ -88,6 +103,7 @@ class Agent():
                 reward - (float) actual reward
                 next_state - (numpy array) with shape (33,) next state vector for the actual agent
                 done - (bool) if True epsiode is finished for the agent
+                timestep ()
 
             OUTPUTS:
             ------------
@@ -119,15 +135,29 @@ class Agent():
 
         # Save experience / reward
         self.memory.add(state, action, reward, next_state, done)
-
         #print('STEP FUNCTION ---------------------')
         #print('self.memory')
         #print(self.memory)
         #print('type', type(self.memory))
         #print()
 
+        # Learn every <UPDATE_EVERY> time steps.
+
         # Learn, if enough samples are available in memory
-        if len(self.memory) > BATCH_SIZE:
+
+        if len(self.memory) > BATCH_SIZE and timestep % UPDATE_EVERY == 0:
+            for _ in range(NUM_UPDATES):
+                experiences = self.memory.sample()
+                self.learn(experiences, GAMMA)
+
+                #print('STEP FUNCTION ---------------------')
+                #print('experiences')
+                #print(experiences)
+                #print('experiences len', len(experiences))
+                #print('type', type(experiences))
+                #print()
+        """
+        if len(self.memory) > BATCH_SIZE :
             experiences = self.memory.sample()
             self.learn(experiences, GAMMA)
 
@@ -137,7 +167,7 @@ class Agent():
             #print('experiences len', len(experiences))
             #print('type', type(experiences))
             #print()
-
+        """
     def act(self, state, add_noise=True):
         """ Returns actions for given state as per current policy.
 
@@ -164,10 +194,11 @@ class Agent():
             action = self.actor_local(state).cpu().data.numpy()
         self.actor_local.train()
         if add_noise:
-            action += self.noise.sample() #*  self.epsilon
+            action += self.noise.sample() #* self.noise_decay
             #action *=  self.epsilon
-        #else:
-        #    action *=  self.epsilon
+            self.noise_decay *= self.noise_decay
+        else:
+            clipped_action =  action
 
         clipped_action = np.clip(action, -1, 1)
 
@@ -270,6 +301,7 @@ class Agent():
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm(self.critic_local.parameters(), 1)
         self.critic_optimizer.step()
 
         # ---------------------------- update actor ---------------------------- #
@@ -297,8 +329,8 @@ class Agent():
         self.soft_update(self.critic_local, self.critic_target, TAU)
         self.soft_update(self.actor_local, self.actor_target, TAU)
 
-        # ----------------------- update epsilon / noise ----------------------- #
-        self.epsilon *= EPSILON_DECAY
+        # ---------------------------- update noise ---------------------------- #
+
         self.reset()
 
     def soft_update(self, local_model, target_model, tau):
@@ -323,7 +355,7 @@ class OUNoise:
     """ Ornstein-Uhlenbeck process.
     """
 
-    def __init__(self, size, seed, mu=0., theta=0.15, sigma=0.2):
+    def __init__(self, size, seed, mu=0., theta=0.15, sigma=NOISE_SIGMA):
         """ Initialize parameters and noise process.
 
             INPUTS:
