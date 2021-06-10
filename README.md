@@ -1,6 +1,6 @@
 [image1]: assets/trained_agent.gif
-
 [image2]: assets/2.png
+
 # Deep Reinforcement Learning Project - Continuous Control
 
 ## Content
@@ -79,9 +79,9 @@ The workspace contains the following files:
 
     ![image2]
 
-    - **Score** is averaged over all 20 agents.
-    - **Moving Average** is rolling average with a roll length of 10, i.e. the **Moving Average** is calculated from 10 consecutive **Score** values.   
-- After **21 episodes** the moving average was always **greater than 30**. Therefore the task (average score over all 20 agents higher than 30 for 100 episodes) has been **successfully completed at episode 121**.
+    - **Score** has been averaged over all 20 agents.
+    - **Moving Average** is the rolling average with a roll length of 10, i.e. the **Moving Average** is calculated from 10 consecutive **Score** values.   
+- After **21 episodes** the moving average was always **greater than 30**. Therefore the task (average score over all 20 agents AND higher than 30 for at least 100 episodes) has been **successfully completed at episode 121**.
 
 ## Setup Instructions <a name="Setup_Instructions"></a>
 The following is a brief set of instructions on setting up a cloned repository.
