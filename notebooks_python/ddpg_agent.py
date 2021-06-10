@@ -16,15 +16,16 @@ TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor
 LR_CRITIC = 1e-4        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
-NOISE_DECAY = 0.999    # NOISE Decay
+NOISE_DECAY = 0.999     # NOISE Decay (not needed)
 UPDATE_EVERY = 20       # Update experience tuple every ... time steps
 NUM_UPDATES = 10        # Number of updates --> call of learn function
-NOISE_SIGMA = 0.05
+NOISE_SIGMA = 0.05      # Diffusion parameter for Ornstein-Uhlenbeck noise, weight parameter for adding random
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
-    """Interacts with and learns from the environment."""
+    """ Interacts with and learns from the environment
+    """
 
     def __init__(self, state_size, action_size, num_agents, random_seed, checkpoint_actor=None, checkpoint_critic=None):
         """Initialize an Agent object.
@@ -34,7 +35,7 @@ class Agent():
                 state_size - (int) dimension of each state
                 action_size - (int) dimension of each action
                 random_seed - (int) random seed
-                checkpoint_actor -  path to actor model parameters
+                checkpoint_actor -  (string) path to actor model parameters
                 checkpoint_critic - (string) path to critic model parameters
 
             OUTPUTS:
@@ -141,10 +142,11 @@ class Agent():
         #print('type', type(self.memory))
         #print()
 
-        # Learn every <UPDATE_EVERY> time steps.
+
 
         # Learn, if enough samples are available in memory
-
+        # Learn every <UPDATE_EVERY> time steps.
+        # Repeat learning process <NUM_UPDATES> times
         if len(self.memory) > BATCH_SIZE and timestep % UPDATE_EVERY == 0:
             for _ in range(NUM_UPDATES):
                 experiences = self.memory.sample()
@@ -156,18 +158,7 @@ class Agent():
                 #print('experiences len', len(experiences))
                 #print('type', type(experiences))
                 #print()
-        """
-        if len(self.memory) > BATCH_SIZE :
-            experiences = self.memory.sample()
-            self.learn(experiences, GAMMA)
 
-            #print('STEP FUNCTION ---------------------')
-            #print('experiences')
-            #print(experiences)
-            #print('experiences len', len(experiences))
-            #print('type', type(experiences))
-            #print()
-        """
     def act(self, state, add_noise=True):
         """ Returns actions for given state as per current policy.
 
@@ -449,12 +440,6 @@ class ReplayBuffer:
 
             INPUTS:
             ------------
-                state - ()
-                action - ()
-                reward - ()
-                next_state - ()
-                done - ()
-
                 state - (numpy array) with shape (33,) state vector for the actual agent
                 action - (numpy array) with shape (4,) actual action values for the agent
                 reward - (float) actual reward
