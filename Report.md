@@ -400,10 +400,10 @@
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     ```
     - A **BUFFER_SIZE** in the range 1e6 to 1e5 seems to be efficient in order to sample experiences from the replay buffer.  
-    - Different ***BATCH_SIZE** values for minibatches were tested. 128 seems to be a good compromise with regard to training speed (the higher the BATCH_SIZE the slower the training progress) and training performance.
+    - Different **BATCH_SIZE** values for minibatches were tested. 128 seems to be a good compromise with regard to training speed (the higher the BATCH_SIZE the slower the training progress) and training performance.
     - The discount factor **GAMMA** has been set to 0.99 as a standard value. Other values could be checked in future approaches. The larger the discount rate is, the more the agent cares about the distant future.
-    - In order to ensure a **soft update** of the target networks by th local (regular) networks the **TAU** parameter has been limited to low values. Higher values would lead to more aggressive target updates, i.e. the local network weights would have more updating power on the target network weights.
-    - Different learning rates were tested during training, both for the actor and critic networks. Higher learning rates could on the one hand increase training speed but on the other lead to update oscillations. Reasonable learning rates were found in the range between 1e-4 to 1e-3. However, the best results were found for **LR_ACTOR** = **LR_CRITIC** = 1e-4 voth for actor and critic.    
+    - In order to ensure a **soft update** of the target networks via the local (regular) networks the **TAU** parameter was limited to low values. Higher values would lead to more aggressive target updates, i.e. the local network weights would have more updating power on the target network weights.
+    - Different learning rates were tested during training, both for the actor and critic networks. Higher learning rates could on the one hand increase training speed but on the other hand lead to update oscillations or instabilities. Reasonable learning rates were found in the range between 1e-4 to 1e-3. However, the best results were found for **LR_ACTOR** = **LR_CRITIC** = 1e-4 both for actor and critic.    
     - **UPDATE_EVERY** and **NUM_UPDATES**: It has been found out, that instead of updating the actor and critic networks 20 times at every timestep, a network update **10 times after every 20 timesteps** increased stability and accelareted convergence.
     - Lower values than 0.2 for **NOISE_SIGMA** (Diffusion parameter for Ornstein-Uhlenbeck noise, weight parameter for adding random to the kinetics) seem to be benficial with regard to stability and fast convergence.
     
@@ -417,8 +417,8 @@
             - self.critic_target
         - use Adam optimizer (minibatch SGD with adaptive learning rate, momentum)
         - initialize Ornstein-Uhlenbeck noise  
-        - initialize epsilon for epsilon-greedy policies
-        - initialize Replaybuffer: for storing each experienced tuple in this buffer. This buffer helps to reduce correlation between consecutive SARS tuples, by random sampling of experiences from this buffer
+        - (initialize epsilon for epsilon-greedy policies)
+        - initialize Replaybuffer: used to store experience tuples. This buffer reduces correlations between consecutive SARS tuples, by random sampling of experiences from this buffer
 
     - **step** function:
         - save experience in replay memory **self.memory**
@@ -426,19 +426,19 @@
         - structure of **experiences** (tuple of torch tensors):
             ```
             (
-                tensor([[33x floats for state], x self.batch_size]),
-                tensor([[4x int for action], x self.batch_size]),
-                tensor([[1x float for reward], x self.batch_size]),
-                tensor([[33x floats for next_state], x self.batch_size]),
-                tensor([[1x int for done], x self.batch_size])
+                tensor([[33x floats for state], x BATCH_SIZE]),
+                tensor([[4x int for action], x BATCH_SIZE]),
+                tensor([[1x float for reward], x BATCH_SIZE]),
+                tensor([[33x floats for next_state], x BATCH_SIZE]),
+                tensor([[1x int for done], x BATCH_SIZE])
             )
             ```
-        - if ReplayBuffer is larger than BATCH_SIZE actual time_step == UPDATE_EVERY, then sample from Replaybuffer 
-        - repeat the learn/update process NUM_UPDATES times
+        - if the ReplayBuffer is larger than the BATCH_SIZE and the actual time_step is equal to UPDATE_EVERY, then 
+            - sample from Replaybuffer NUM_UPDATES times
+            - repeat the learn/update process for each sample
         
     
     - **act** function:
-        - returns a **clipped_action** for given state and current policy
         - convert **state** from numpy array to torch tensor
         - use agent **state** as input for **actor_local**
         - **actor_local** is used to find the best action
@@ -447,17 +447,18 @@
         - set **actor_local model** back to train mode
         - optional: add Ornstein-Uhlenbeck noise to action
         - limit action to a **clipped_action**
+        - return **clipped_action** for the given state and current policy
         
     - **learn** function:
         - update policy and value parameters using given batch of experience tuples
         - Input: **experiences** (tuple of torch tensors):
             ```
             (
-                tensor([[33x floats for states], x self.batch_size for minibatch]),
-                tensor([[4x int for actions], x self.batch_size for minibatch]),
-                tensor([[1x float for rewards], x self.batch_size for minibatch]),
-                tensor([[33x floats for next_states], x self.batch_size for minibatch]),
-                tensor([[1x bool for dones], x self.batch_size for minibatch])
+                tensor([[33x floats for states], x BATCH_SIZE]),
+                tensor([[4x int for actions], x BATCH_SIZE]),
+                tensor([[1x float for rewards], x BATCH_SIZE]),
+                tensor([[33x floats for next_states], x BATCH_SIZE]),
+                tensor([[1x bool for dones], x BATCH_SIZE])
             )
             ```
         - compute and minimize the loss for **actor** and **critic**
@@ -467,21 +468,21 @@
                     Q_targets_next = self.critic_target(next_states, actions_next)
 
                     RESULT structure for Q_targets_next:
-                    tensor([[1x float], x self.batch_size])
+                    tensor([[1x float], x BATCH_SIZE])
                     ```
                 - compute **Q_targets** for current states 
                     ```
                     Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
                     RESULT structure for Q_targets:
-                    tensor([[1x float], x self.batch_size])
+                    tensor([[1x float], x BATCH_SIZE])
                     ```
                 - get expected Q values **Q_expected** from **critic local model**
                     ```
                     Q_expected = self.critic_local(states, actions)
 
                     RESULT structure for Q_expected:
-                    tensor([[1x float], x self.batch_size])
+                    tensor([[1x float], x BATCH_SIZE])
                     ```
                 - compute loss **critic_loss**
                     ```
@@ -506,7 +507,7 @@
                     actions_pred = self.actor_local(states)
 
                     RESULT structure for actions_pred:
-                    tensor([[4x float], x self.batch_size for minibatch])
+                    tensor([[4x float], x BATCH_SIZE for minibatch])
                     ```
                 - Compute **actor_loss** via critic local
                     ```
@@ -751,7 +752,7 @@
     - **add** function: add an experience tuple to self.memory object
     - **sample** function: 
         - create a random **experiences** sample (of type list) from **self.memory** ReplayBuffer instance with size **BATCH_SIZE**
-        - size of ReplayBuffer (self.memory): BUFFER_SIZE
+        - size of ReplayBuffer (self.memory): **BUFFER_SIZE**
         - structure of experience sample: list of named tuples **Experience** with length **BATCH_SIZE**
             ```
             [
@@ -1038,8 +1039,8 @@
 ## Implementation - Continuous_Control_Trained_Agent.ipynb <a name="impl_notebook_trained_agent"></a> 
 - Open Jupyter Notebook ```Continuous_Control_Trained_Agent.ipynb```
     ### Import important libraries
-    - modul ***unityagents*** provides the Unity Environment. This modul is part and installed via requirements.txt. Check the README.md file for detailed setup instructions.
-    - modul **dqn_agent** is the own implementation of an DQN agent. Check the description of **dqn_agent.py** for further details. 
+    - modul ***unityagents*** provides the Unity Environment. This modul is part of requirements.txt. Check the README.md file for detailed setup instructions.
+    - modul **ddpg_agent** contains the implementation of an DDPG agent. Check the description of **ddpg_agent.py** for further details. 
     ```
     import gym
     import random
@@ -1118,7 +1119,7 @@
 
 ## Ideas for future work <a name="ideas_future"></a> 
 Several parts of the actual implementation could be improved in the future:
-- At the moment there is no asynchronous ([A3C](https://arxiv.org/pdf/1602.01783.pdf)) approach implemented, i.e. we do not use agent parallelization via multi-core CPU threading at the moment. Such approaches could speed up learning very efficiently. In addition, samples will be decorrelated because agents will likely experience different states at any given time. This means, we could remove the ReplayBuffer by using this approach.
-- Further, more sophisticated hyperparameter tuning could speed up and stabilize the learning process.
-- n-step bootstrapping instead of TD estimates for the critic network could result in faster convergence with less experience required and a reduction of the TD estimate bias.
-- The implementation of Generalized Advantage Estimation ([GAE](https://arxiv.org/pdf/1506.02438.pdf)), i.e. a mixture implementation of all n-step bootstrapping estimates at once via the calculation of the exponantially **n**-decaying (for **n**-step bootstrapping) lambda return could further speed up training because multiple value functions spread around on every time step.
+- At the moment there is no asynchronous ([A3C](https://arxiv.org/pdf/1602.01783.pdf)) approach implemented, i.e. we do not use agent parallelization via multi-core CPU threading. Such approaches could speed up learning very efficiently. In addition, samples will be decorrelated because agents will likely experience different states at any given time. This means, we could remove the ReplayBuffer and therefore simplify the architecture.
+- A more sophisticated hyperparameter tuning could further speed up and stabilize the learning process.
+- n-step bootstrapping instead of TD estimates for the critic network could result in faster convergence with less experience required and a reduction of (the TD estimate) bias.
+- The implementation of Generalized Advantage Estimation ([GAE](https://arxiv.org/pdf/1506.02438.pdf)), i.e. a mixture implementation of all n-step bootstrapping estimates at once via the calculation of the exponantially **n**-decaying (for **n**-step bootstrapping) lambda return could further speed up training, as multiple value functions spread around on every time step.
